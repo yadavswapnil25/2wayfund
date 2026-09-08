@@ -12,13 +12,12 @@
 
 **Overrides**: §1 (Agent Behaviour)
 
-**Rule**: Agents MUST NOT run `npm run build`, `ng build`, `build:ssr`, or any production/SSR build command unless the task owner explicitly requests it in writing for that specific task.
+**Rule**: Agents MUST NOT run `npm run build`, `ng build`, or any production/SSR build command unless the task owner explicitly requests it in writing for that specific task.
 
 **Rationale**: Build times are long and disrupt the local development flow. The dev server (`npm start` / `ng serve`) is sufficient for iterative development and verification.
 
 **Allowed build commands (on explicit request only)**:
 - `npm run build` — only if user explicitly says "please build"
-- `npm run build:ssr` — only if user explicitly says "please build SSR"
 
 ---
 
@@ -86,7 +85,7 @@ graphify query "your question about the codebase"
 
 **Overrides**: §1 (Agent Behaviour — "Understand before acting")
 
-**Rule**: When a task involves a third-party library, framework, SDK, or API (Angular, Laravel, RxJS, Stripe, Passport, NgRx, etc.), the agent MUST use the **Context7 MCP tool** to look up current documentation BEFORE writing code or making assumptions based on training data.
+**Rule**: When a task involves a third-party library, framework, SDK, or API (React, Laravel, RxJS, Stripe, Passport, NgRx, etc.), the agent MUST use the **Context7 MCP tool** to look up current documentation BEFORE writing code or making assumptions based on training data.
 
 **Sequence**:
 1. Run `resolve-library-id` to get the correct Context7 library ID.
@@ -95,7 +94,7 @@ graphify query "your question about the codebase"
 
 **Do not rely on training data alone** — library APIs change between versions. Training data may be stale.
 
-**Rationale**: This project uses Angular 22 (v22.0.1), Laravel 11, and other rapidly-evolving libraries. Training cutoffs mean the agent may cite deprecated APIs, removed options, or wrong method signatures. Context7 provides version-accurate documentation on demand.
+**Rationale**: This project uses React 18 (v22.0.1), Laravel 11, and other rapidly-evolving libraries. Training cutoffs mean the agent may cite deprecated APIs, removed options, or wrong method signatures. Context7 provides version-accurate documentation on demand.
 
 ---
 

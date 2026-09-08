@@ -6,7 +6,7 @@
 > Read fully before any action. Every directive is mandatory unless explicitly marked otherwise.
 >
 > **Framework-Specific Standards:** For rules specific to this repository's tech stack, refer to:
-> - [Angular Frontend Standards](angular-standards.md)
+> - [React Frontend Standards](react-standards.md)
 
 ---
 

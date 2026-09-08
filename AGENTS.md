@@ -1,4 +1,4 @@
-# <SportForCharity> — Agent Directives
+# <2wayfund> — Agent Directives
 
 This project follows the **Engineering Standards** in `docs/engineering-standards.md`. Read that file in full before making changes. The rules there are mandatory unless explicitly overridden in `docs/customer-overrides.md`.
 
@@ -9,10 +9,10 @@ This project follows the **Engineering Standards** in `docs/engineering-standard
 
 ## Project context
 
-- **Customer**: <SportForCharity>
+- **Customer**: <2wayfund>
 - **Engagement type**: <product build>
-- **Stack**: <Angular 22 (v22.0.1 — latest stable)>
-- **Repository layout**:<RunForCharity consist of backend as Laravel and Frontend as UI>
+- **Stack**: <React 18 (v18.3.1 — latest stable)>
+- **Repository layout**:<2wayfund consist of backend as Laravel and Frontend as UI>
 
 ## Agent Behavior (Caveman Mode)
 - **Zero Fluff:** Omit conversational pleasantries, apologies, and verbose explanations.
@@ -25,7 +25,7 @@ This project follows the **Engineering Standards** in `docs/engineering-standard
 When an agent needs information, follow this priority order — do **not** fall back to a generic web search before exhausting the higher-priority sources:
 
 1. **Local code exploration → Graphify.** This repo is indexed. Use the `graphify` skill (or `graphify query "your question"` in terminal) for class hierarchies, dependencies, "where is X defined", "what calls Y", architecture maps. Do **not** start with bare `Glob`/`Grep` when the question is structural.
-2. **Library/framework documentation → Context7.** For Laravel, Angular, AWS SDK, Stripe, or any third-party package documentation, use the Context7 MCP. It returns up-to-date official docs, not stale training data. Do **not** guess at API signatures or hallucinate config keys.
+2. **Library/framework documentation → Context7.** For Laravel, React, AWS SDK, Stripe, or any third-party package documentation, use the Context7 MCP. It returns up-to-date official docs, not stale training data. Do **not** guess at API signatures or hallucinate config keys.
 3. **Anything else → standard tools.** Only after (1) and (2) are exhausted: `WebSearch`, `WebFetch`, file-level `Read`/`Grep`/`Glob`.
 
 Rationale: Graphify gives a structural view that file-by-file reading misses; Context7 prevents the agent from inventing fictional APIs.
