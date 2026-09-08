@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Building2, Landmark, ShieldAlert, UserPlus, Users } from "lucide-react";
 import { PageHead } from "../../components/ui/Flow";
-import { Panel, PanelBody, PanelHead } from "../../components/ui/Panel";
 import { Field, FormActions, FormGrid, Select, TextInput } from "../../components/ui/Field";
 import { Btn } from "../../components/ui/Button";
-import { Callout, Chip, Note, TypeTab } from "../../components/ui/Misc";
-import { DirectoryCard, DirectoryEmpty, DirectoryList } from "../../components/ui/DirectoryCard";
+import { Chip, Note, TypeTab } from "../../components/ui/Misc";
 import { Tag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
 import type { Beneficiary } from "../../types/data";
@@ -201,10 +200,20 @@ export function BeneficiariesPage() {
         lede="Register, review and remove the accounts you can transfer to. A newly added beneficiary enters a cooling-off period before it can receive its first settlement."
       />
 
-      <div className="grid gap-4.5 mb-4 items-stretch min-[1001px]:grid-cols-2">
-        <Panel className="mb-0 flex flex-col">
-          <PanelHead title="Add a Beneficiary" note="Confirmation required" />
-          <PanelBody>
+      <div className="grid gap-5 mb-5 items-start min-[1001px]:grid-cols-2">
+        {/* Add a beneficiary */}
+        <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center gap-3 px-4.5 sm:px-5 py-4 border-b border-border-lt">
+            <span className="flex-none w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+              <UserPlus size={17} />
+            </span>
+            <div>
+              <h3 className="m-0 text-[14.5px] font-bold text-navy">Add a Beneficiary</h3>
+              <p className="m-0 mt-0.5 text-[11px] text-ink-2">Confirmation required</p>
+            </div>
+          </div>
+
+          <div className="px-4.5 sm:px-5 py-4">
             <p className="mt-0 text-xs text-ink-2 mb-3">
               Register payees from Indian commercial banks (SBI, HDFC, ICICI, PNB, etc.) or your internal 2 Way Fund accounts. External
               beneficiaries must be based in India — this account cannot add a beneficiary in another country.
@@ -212,7 +221,7 @@ export function BeneficiariesPage() {
 
             {formError ? <Note danger>{formError}</Note> : null}
             {confirmMsg ? (
-              <div className="bg-[#F0F8F3] border border-[#A8D4BB] rounded-lg p-4 mb-3">
+              <div className="bg-[#F0F8F3] border border-[#A8D4BB] rounded-xl p-4 mb-3">
                 <h3 className="text-pos font-bold mb-2 text-sm">Beneficiary added</h3>
                 <p className="m-0 text-xs">{confirmMsg}</p>
               </div>
@@ -280,12 +289,13 @@ export function BeneficiariesPage() {
                   </Field>
                 </FormGrid>
                 {verifyResult ? (
-                  <Callout title="Account details verified" className="mt-3">
-                    <p>
+                  <div className="rounded-2xl border border-border-lt bg-[#EAF1F9] px-4.5 py-4 mt-3">
+                    <h3 className="m-0 text-[13px] font-bold text-navy">Account details verified</h3>
+                    <p className="m-0 mt-1.5 text-[12.5px] text-ink">
                       Account number, panel number and customer ID are all correctly formatted. This is a format check only — no external
                       directory is queried, since this file makes no network call. Select Save Internal Payee to register it.
                     </p>
-                  </Callout>
+                  </div>
                 ) : null}
                 <div className="flex items-center gap-3 flex-wrap border-t border-border-lt pt-3.5 mt-3.5">
                   <Btn onClick={verifyInternal}>Verify Account</Btn>
@@ -302,12 +312,12 @@ export function BeneficiariesPage() {
             </div>
 
             {pending ? (
-              <div className="bg-tint border border-border-lt rounded-lg p-4 mt-4 text-[12.5px]">
+              <div className="bg-tint border border-border-lt rounded-xl p-4 mt-4 text-[12.5px]">
                 <span className="block font-bold text-navy mb-2">Confirm with one-time password — displayed, never sent</span>
                 <div>
                   Adding a payee is a protected action. Confirm {pending.name} ({pending.account}) to register it.
                 </div>
-                <div className="inline-block font-num text-[26px] font-bold tracking-widest text-navy bg-white border border-border rounded-md px-4 py-2 my-1.5">
+                <div className="inline-block font-num text-[26px] font-bold tracking-widest text-navy bg-white border border-border rounded-lg px-4 py-2 my-1.5">
                   {otp}
                 </div>
                 <div>Generated in this browser and shown here so the step can be demonstrated. Nothing is transmitted.</div>
@@ -316,7 +326,7 @@ export function BeneficiariesPage() {
                     value={otpInput}
                     onChange={(e) => setOtpInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && confirmOtp()}
-                    className="w-[140px] font-num text-[15px] px-2.5 py-2 border border-border rounded-[5px]"
+                    className="w-[140px] font-num text-[15px] px-2.5 py-2 border border-border rounded-lg"
                     aria-label="One-time password"
                   />
                   <Btn variant="approve" onClick={confirmOtp}>
@@ -327,83 +337,111 @@ export function BeneficiariesPage() {
                 {otpError ? <div className="text-neg text-xs font-semibold mt-2.5">{otpError}</div> : null}
               </div>
             ) : null}
-          </PanelBody>
-        </Panel>
+          </div>
+        </div>
 
-        <Panel className="mb-0 flex flex-col">
-          <div className="flex items-center justify-between gap-4 flex-wrap px-3.5 py-2.5 bg-gradient-to-b from-[#F2F6FA] to-panel-head border-b border-border">
-            <div>
-              <h2 className="text-[13px] font-bold text-navy">Saved Beneficiaries Directory</h2>
-              <p className="mt-0.5 text-[11px] text-ink-2">Payees authorised on your NetBanking profile</p>
+        {/* Saved beneficiaries directory */}
+        <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between gap-3 flex-wrap px-4.5 sm:px-5 py-4 border-b border-border-lt">
+            <div className="flex items-center gap-3">
+              <span className="flex-none w-10 h-10 rounded-xl bg-[#EAF1F9] text-navy flex items-center justify-center">
+                <Users size={17} />
+              </span>
+              <div>
+                <h3 className="m-0 text-[14.5px] font-bold text-navy">Saved Beneficiaries Directory</h3>
+                <p className="m-0 mt-0.5 text-[11px] text-ink-2">Payees authorised on your NetBanking profile</p>
+              </div>
             </div>
             <Tag variant="completed">
               {store.beneficiaries.length} {store.beneficiaries.length === 1 ? "Payee" : "Payees"}
             </Tag>
           </div>
-          <PanelBody>
-            <DirectoryList>
-              {store.beneficiaries.length === 0 ? (
-                <DirectoryEmpty>No beneficiaries registered. Add one using the form.</DirectoryEmpty>
-              ) : (
-                store.beneficiaries.map((b) => {
-                  const badge = beneBadge(b);
-                  const pendingStatus = b.status !== "Verified";
-                  return (
-                    <DirectoryCard
-                      key={b.id}
-                      name={b.name}
-                      badge={<Tag variant={badge.variant}>{badge.label}</Tag>}
-                      meta={[
-                        `Acc: ${b.account} · ${beneCodeLabel(b)}`,
-                        ...(pendingStatus ? [`Status: ${b.status}`] : []),
-                      ]}
-                      sub={`Bank: ${b.bankName || b.detail}`}
-                      actions={
-                        <>
-                          {pendingStatus ? (
-                            <Btn onClick={() => completeCheck(b.id)} title="Demo control — stands in for the cooling-off period elapsing">
-                              Complete check
-                            </Btn>
-                          ) : (
-                            <Link to="/transfer" className="inline-block border rounded-[5px] px-4 py-2 text-xs font-semibold bg-gradient-to-b from-navy-lt to-navy border-navy-dk text-white no-underline">
-                              Transfer
-                            </Link>
-                          )}
-                          <Btn onClick={() => removeBene(b.id)}>Delete</Btn>
-                        </>
-                      }
-                    />
-                  );
-                })
-              )}
-            </DirectoryList>
-          </PanelBody>
-          <PanelBody>
+
+          {store.beneficiaries.length === 0 ? (
+            <p className="text-center py-10 text-ink-2 text-[12.5px]">No beneficiaries registered. Add one using the form.</p>
+          ) : (
+            <div className="divide-y divide-border-lt">
+              {store.beneficiaries.map((b) => {
+                const badge = beneBadge(b);
+                const pendingStatus = b.status !== "Verified";
+                return (
+                  <div key={b.id} className="flex items-start gap-3 px-4.5 sm:px-5 py-3.5 hover:bg-tint/70 transition-colors flex-wrap sm:flex-nowrap">
+                    <span
+                      className={`flex-none w-9 h-9 rounded-full flex items-center justify-center ${
+                        b.internal ? "bg-[#EAF1F9] text-navy" : "bg-[#EFF8F2] text-pos"
+                      }`}
+                    >
+                      {b.internal ? <Building2 size={16} /> : <Landmark size={16} />}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <strong className="text-[13px] text-ink truncate">{b.name}</strong>
+                        <Tag variant={badge.variant}>{badge.label}</Tag>
+                        {pendingStatus ? <Tag variant="review">{b.status}</Tag> : null}
+                      </div>
+                      <p className="m-0 mt-0.5 text-[11px] text-ink-2 truncate">
+                        Acc: {b.account} · {beneCodeLabel(b)}
+                      </p>
+                      <p className="m-0 mt-0.5 text-[11px] text-ink-2 truncate">Bank: {b.bankName || b.detail}</p>
+                    </div>
+                    <div className="flex-none flex items-center gap-2 mt-2 sm:mt-0 w-full sm:w-auto justify-end">
+                      {pendingStatus ? (
+                        <button
+                          type="button"
+                          onClick={() => completeCheck(b.id)}
+                          title="Demo control — stands in for the cooling-off period elapsing"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-semibold text-ink hover:bg-tint"
+                        >
+                          Complete check
+                        </button>
+                      ) : (
+                        <Link
+                          to="/transfer"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-navy-dk bg-gradient-to-b from-navy-lt to-navy px-3.5 py-1.5 text-xs font-semibold text-white no-underline hover:brightness-110"
+                        >
+                          Transfer
+                        </Link>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeBene(b.id)}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-semibold text-ink hover:bg-tint"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="px-4.5 sm:px-5 py-3.5 border-t border-border-lt">
             <Note>
               Only beneficiaries marked <strong>Verified</strong> can be selected on <Link to="/transfer">Transfer Funds</Link>. This is control
               layer 4 of the security model — holding a newly registered payee before its first settlement limits what a compromised session can
               do.
             </Note>
-          </PanelBody>
-        </Panel>
+          </div>
+        </div>
       </div>
 
-      <Panel>
-        <PanelHead title="Why New Beneficiaries Are Held" />
-        <PanelBody>
-          <Callout title="Verification is never accelerated by a payment" variant="warn">
-            <p>
-              A newly registered beneficiary is held before its first settlement so that an attacker who gains access to a session cannot
-              immediately add their own account and drain the balance. The hold clears on the institution's own schedule, through its own checks.
-            </p>
-            <p>
-              No legitimate institution will offer to lift that hold in exchange for a fee, a transfer, or a "verification payment", and none will
-              ask you for your password or one-time code to release it. A request of that kind is a fraud attempt regardless of who appears to be
-              making it.
-            </p>
-          </Callout>
-        </PanelBody>
-      </Panel>
+      {/* Why held */}
+      <div className="rounded-2xl border border-[#E3C4BC] bg-[#FDF6F4] px-4.5 sm:px-5 py-4">
+        <div className="flex items-center gap-2 mb-2">
+          <ShieldAlert size={15} className="text-neg" />
+          <h3 className="m-0 text-[13px] font-bold text-[#9E2D22]">Verification is never accelerated by a payment</h3>
+        </div>
+        <p className="text-[12.5px] leading-relaxed mb-2 text-ink">
+          A newly registered beneficiary is held before its first settlement so that an attacker who gains access to a session cannot immediately
+          add their own account and drain the balance. The hold clears on the institution's own schedule, through its own checks.
+        </p>
+        <p className="text-[12.5px] leading-relaxed m-0 text-ink">
+          No legitimate institution will offer to lift that hold in exchange for a fee, a transfer, or a "verification payment", and none will ask
+          you for your password or one-time code to release it. A request of that kind is a fraud attempt regardless of who appears to be making
+          it.
+        </p>
+      </div>
     </>
   );
 }

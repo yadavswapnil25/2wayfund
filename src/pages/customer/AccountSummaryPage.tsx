@@ -1,11 +1,8 @@
-import { Eye, EyeOff, Copy, Check, KeyRound, Send, UserPlus, FileText, ChevronRight, Printer } from "lucide-react";
+import { Eye, EyeOff, Copy, Check, KeyRound, Send, UserPlus, FileText, ChevronRight, Printer, LogOut, ArrowUpRight, ArrowDownRight, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PageHead } from "../../components/ui/Flow";
-import { Panel, PanelBody, PanelHead } from "../../components/ui/Panel";
-import { Tag, StatusTag } from "../../components/ui/Tag";
-import { Note } from "../../components/ui/Misc";
-import { TableWrap, Th, Td, CellStrong, CellSub, EmptyRow } from "../../components/ui/Table";
+import { StatusTag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
 import { displayMoney, formatCode, groupInFours, monogram, MASK } from "../../lib/format";
 
@@ -62,358 +59,265 @@ export function AccountSummaryPage() {
         lede="Consolidated position across your multi-currency ledgers, with the most recent settlement activity. Figures are illustrative and do not represent any real holding."
       />
 
-      {/* Welcome strip */}
-      <Panel>
-        <div className="flex items-center justify-between gap-4 flex-wrap px-4.5 py-4">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <span className="relative flex-none w-11 h-11 rounded-full border-2 border-navy-lt overflow-hidden">
-              {!avatarError ? (
-                <img
-                  src="/user.jpg"
-                  alt={user.name}
-                  className="w-full h-full object-cover"
-                  onError={() => setAvatarError(true)}
-                />
-              ) : (
-                <span className="w-full h-full bg-gradient-to-br from-[#E8D6A8] to-gold text-navy-dk text-[15px] font-bold flex items-center justify-center">
-                  {monogram(user.name)}
-                </span>
-              )}
-              <span className="absolute -right-0.5 -bottom-0.5 w-2.5 h-2.5 rounded-full bg-pos border-2 border-white" />
-            </span>
-            <div>
-              <p className="m-0 text-sm flex items-center gap-2 flex-wrap">
-                Welcome, <strong className="text-[15px] text-navy">{user.name}</strong>
-                <Tag variant="completed">KYC Verified</Tag>
-              </p>
-              <p className="mt-1 text-[11.5px] text-ink-2">
-                User ID: <strong className="text-ink font-semibold">{user.reference}</strong> · Branch IFSC:{" "}
-                <strong className="text-ink font-semibold">{user.ifsc}</strong> · Last login:{" "}
-                <strong className="text-ink font-semibold">{user.lastLogin}</strong>
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3.5 flex-wrap">
-            <div className="text-right">
-              <span className="block text-[10.5px] tracking-wide uppercase text-ink-2 font-semibold">Customer scheme</span>
-              <strong className="block mt-0.5 text-[13px] text-navy">{user.accountTier}</strong>
-            </div>
-            <button type="button" onClick={() => navigate("/pin-security")} className="border rounded-[5px] px-4 py-2 text-xs font-semibold bg-white border-border">
-              <KeyRound size={13} className="inline -mt-0.5 mr-1" /> 9-Digit PIN
-            </button>
-            <button type="button" onClick={logout} className="border rounded-[5px] px-4 py-2 text-xs font-semibold bg-white border-border">
-              Log Out
-            </button>
-          </div>
-        </div>
-      </Panel>
+      {/* Hero balance card */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-navy-dk via-navy to-navy-lt text-white shadow-lg mb-5">
+        <div className="pointer-events-none absolute -top-24 -right-16 w-72 h-72 rounded-full bg-gold/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-28 -left-14 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
 
-      {/* Account card + quick actions */}
-      <div className="grid gap-4.5 mb-4 items-stretch min-[1001px]:grid-cols-[1.7fr_1fr]">
-        <Panel className="mb-0 flex flex-col">
-          <div className="flex items-center justify-between gap-2.5 flex-wrap px-4.5 py-3.5 border-b border-border-lt">
-            <div>
-              <span className="inline-block text-[10px] font-bold tracking-wide uppercase text-navy bg-[#EAF1F9] border border-border px-2.5 py-0.5 rounded mr-2">
-                Savings Account
+        <div className="relative px-5 sm:px-7 pt-6 pb-5">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <span className="relative flex-none w-12 h-12 rounded-full border-2 border-white/40 overflow-hidden">
+                {!avatarError ? (
+                  <img
+                    src="/user.jpg"
+                    alt={user.name}
+                    className="w-full h-full object-cover"
+                    onError={() => setAvatarError(true)}
+                  />
+                ) : (
+                  <span className="w-full h-full bg-gradient-to-br from-[#E8D6A8] to-gold text-navy-dk text-[16px] font-bold flex items-center justify-center">
+                    {monogram(user.name)}
+                  </span>
+                )}
+                <span className="absolute -right-0.5 -bottom-0.5 w-3 h-3 rounded-full bg-pos border-2 border-navy" />
               </span>
-              <strong>2 Way Fund International</strong>
+              <div className="min-w-0">
+                <p className="m-0 text-[12px] text-white/60">Welcome back</p>
+                <p className="m-0 text-[17px] font-bold truncate">{user.name}</p>
+                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide bg-white/15 text-white border border-white/20 px-2 py-0.5 rounded-full">
+                    <ShieldCheck size={11} /> KYC Verified
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-wide bg-white/10 text-white/80 border border-white/15 px-2 py-0.5 rounded-full">
+                    {user.accountTier}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="text-right">
-              <span className="block text-[10.5px] tracking-wide uppercase text-ink-2 font-semibold">Panel code</span>
-              <strong className="inline-block mt-0.5 font-num text-[12px] text-navy border border-gold-dk bg-[#FBF6E9] px-2.5 py-0.5 rounded">
-                {user.panelCode}
-              </strong>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate("/pin-security")}
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-xs font-semibold text-white hover:bg-white/20 transition-colors"
+              >
+                <KeyRound size={13} /> 9-Digit PIN
+              </button>
+              <button
+                type="button"
+                onClick={logout}
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-xs font-semibold text-white hover:bg-white/20 transition-colors"
+              >
+                <LogOut size={13} /> Log Out
+              </button>
             </div>
           </div>
 
-          <div className="px-4.5 py-4 border-b border-border-lt">
-            <span className="text-[10.5px] tracking-wide uppercase text-ink-2 font-semibold">Available operative balance</span>
-            <div className="flex items-center gap-2.5 flex-wrap mt-1.5">
-              <span className="font-num tabular-nums text-[25px] font-bold text-navy">{displayMoney(inrLedger.amount, "INR", balancesHidden)}</span>
-              <Tag variant="completed">Cleared funds</Tag>
+          <div className="mt-6">
+            <span className="text-[11px] uppercase tracking-wide text-white/60 font-semibold">Available operative balance</span>
+            <div className="flex items-end gap-3 flex-wrap mt-1.5">
+              <span className="font-num tabular-nums text-[32px] sm:text-[40px] font-extrabold leading-none">
+                {displayMoney(inrLedger.amount, "INR", balancesHidden)}
+              </span>
+              <span className="mb-1.5 inline-flex items-center gap-1 text-[10.5px] font-bold uppercase bg-white/10 border border-white/15 px-2.5 py-1 rounded-full text-white/80">
+                Cleared funds
+              </span>
             </div>
           </div>
 
-          <div className="grid gap-3 px-4.5 py-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(175px,1fr))" }}>
-            <div className="border border-border-lt rounded-lg bg-tint px-3.5 py-2.5">
-              <span className="block mb-1 text-[10.5px] uppercase text-ink-2 font-semibold">Account number</span>
-              <p className="m-0 flex items-center gap-1.5">
+          <div className="grid gap-2.5 sm:grid-cols-3 mt-5">
+            <div className="rounded-xl border border-white/15 bg-white/8 px-3.5 py-2.5 backdrop-blur-sm">
+              <span className="block mb-1 text-[10.5px] uppercase text-white/55 font-semibold">Account number</span>
+              <p className="m-0 flex items-center gap-1.5 font-num">
                 <span>{acctRevealed ? groupInFours(user.accountNumber) : `${MASK} ${MASK} ${last4}`}</span>
-                <button type="button" onClick={() => setAcctRevealed((v) => !v)} className="text-ink-2 hover:text-navy" title="Show / hide">
+                <button type="button" onClick={() => setAcctRevealed((v) => !v)} className="text-white/60 hover:text-white" title="Show / hide">
                   {acctRevealed ? <EyeOff size={13} /> : <Eye size={13} />}
                 </button>
-                <button type="button" onClick={() => copy(user.accountNumber, "acct")} className="text-ink-2 hover:text-navy" title="Copy">
+                <button type="button" onClick={() => copy(user.accountNumber, "acct")} className="text-white/60 hover:text-white" title="Copy">
                   {copiedField === "acct" ? <Check size={13} /> : <Copy size={13} />}
                 </button>
               </p>
             </div>
-            <div className="border border-border-lt rounded-lg bg-tint px-3.5 py-2.5">
-              <span className="block mb-1 text-[10.5px] uppercase text-ink-2 font-semibold">Customer ID (CIF)</span>
+            <div className="rounded-xl border border-white/15 bg-white/8 px-3.5 py-2.5 backdrop-blur-sm">
+              <span className="block mb-1 text-[10.5px] uppercase text-white/55 font-semibold">Customer ID (CIF)</span>
               <p className="m-0 flex items-center gap-1.5">
                 <span>{user.reference}</span>
-                <button type="button" onClick={() => copy(user.reference, "cif")} className="text-ink-2 hover:text-navy" title="Copy">
+                <button type="button" onClick={() => copy(user.reference, "cif")} className="text-white/60 hover:text-white" title="Copy">
                   {copiedField === "cif" ? <Check size={13} /> : <Copy size={13} />}
                 </button>
               </p>
             </div>
-            <div className="border border-border-lt rounded-lg bg-tint px-3.5 py-2.5">
-              <span className="block mb-1 text-[10.5px] uppercase text-ink-2 font-semibold">Branch &amp; IFSC code</span>
+            <div className="rounded-xl border border-white/15 bg-white/8 px-3.5 py-2.5 backdrop-blur-sm">
+              <span className="block mb-1 text-[10.5px] uppercase text-white/55 font-semibold">Branch &amp; IFSC code</span>
               <p className="m-0">{user.ifsc}</p>
-              <span className="text-[11px] text-ink-2">{user.branch}</span>
+              <span className="text-[11px] text-white/55">{user.branch}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative border-t border-white/10 bg-black/15 px-5 sm:px-7 py-3 flex items-center justify-between gap-3 flex-wrap text-[11.5px] text-white/70">
+          <span>
+            <span className="inline-block w-1.75 h-1.75 rounded-full bg-pos mr-1.5" />
+            Electronic clearing enabled: IMPS, NEFT, RTGS, 2WF Direct
+          </span>
+          <span>
+            Daily transfer limit: <strong className="text-white">{formatCode(user.dailyDomesticLimit, "INR")}</strong>
+          </span>
+        </div>
+      </div>
+
+      {/* Quick actions */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-2.5">
+        <Link
+          to="/transfer"
+          className="group relative overflow-hidden rounded-2xl border border-border-lt bg-white px-4 py-4 no-underline text-inherit shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+        >
+          <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-blue-50 text-blue-600 mb-3">
+            <Send size={17} />
+          </span>
+          <strong className="block text-[13.5px] text-navy">Transfer Funds</strong>
+          <span className="block text-[11px] text-ink-2 mt-0.5">IMPS &middot; NEFT &middot; 2WF</span>
+          <ChevronRight size={14} className="absolute right-3.5 top-4 text-border group-hover:text-blue-500 transition-colors" />
+        </Link>
+
+        <Link
+          to="/beneficiaries"
+          className="group relative overflow-hidden rounded-2xl border border-border-lt bg-white px-4 py-4 no-underline text-inherit shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+        >
+          <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-purple-50 text-purple-600 mb-3">
+            <UserPlus size={17} />
+          </span>
+          <strong className="block text-[13.5px] text-navy">Add Payee</strong>
+          <span className="block text-[11px] text-ink-2 mt-0.5">Indian Bank &middot; 2WF</span>
+          <ChevronRight size={14} className="absolute right-3.5 top-4 text-border group-hover:text-purple-500 transition-colors" />
+        </Link>
+
+        <button
+          type="button"
+          onClick={() => navigate("/pin-security")}
+          className="group relative overflow-hidden text-left rounded-2xl border border-border-lt bg-white px-4 py-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+        >
+          <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-[#FBF4E1] text-amber mb-3">
+            <KeyRound size={17} />
+          </span>
+          <strong className="block text-[13.5px] text-navy">9-Digit PIN</strong>
+          <span className="block text-[11px] text-ink-2 mt-0.5">{user.pinStatus}</span>
+          <ChevronRight size={14} className="absolute right-3.5 top-4 text-border group-hover:text-amber transition-colors" />
+        </button>
+
+        <Link
+          to="/statements"
+          className="group relative overflow-hidden rounded-2xl border border-border-lt bg-white px-4 py-4 no-underline text-inherit shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+        >
+          <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-[#EFF8F2] text-pos mb-3">
+            <FileText size={17} />
+          </span>
+          <strong className="block text-[13.5px] text-navy">e-Passbook</strong>
+          <span className="block text-[11px] text-ink-2 mt-0.5">Full ledger statement</span>
+          <ChevronRight size={14} className="absolute right-3.5 top-4 text-border group-hover:text-pos transition-colors" />
+        </Link>
+      </div>
+      <p className="text-[11px] text-ink-2 mb-5">
+        Your 9-digit PIN is <strong className="text-ink font-semibold">{user.pinStatus.toLowerCase()}</strong> — required before authorising fund
+        transfers and beneficiary payouts.
+      </p>
+
+      {/* Activity + sidebar */}
+      <div className="grid gap-5 items-start lg:grid-cols-[1fr_320px]">
+        <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between gap-3 flex-wrap px-4.5 sm:px-5 py-4 border-b border-border-lt">
+            <div>
+              <h3 className="m-0 text-[14.5px] font-bold text-navy">Recent Activity</h3>
+              <p className="m-0 mt-0.5 text-[11px] text-ink-2">Live verified entries from 2 Way Fund core clearing ledger</p>
+            </div>
+            <Link to="/statements" className="inline-flex items-center gap-1 text-[12px] font-semibold text-navy-lt no-underline hover:underline">
+              View Full Passbook <ChevronRight size={14} />
+            </Link>
+          </div>
+
+          {inrLedgerTx.length === 0 ? (
+            <p className="text-center py-10 text-ink-2 text-[12.5px]">No domestic ledger entries yet.</p>
+          ) : (
+            <div className="divide-y divide-border-lt">
+              {inrLedgerTx.slice(0, 6).map(({ t, balanceAfter }) => (
+                <div key={t.ref} className={`group flex items-center gap-3 px-4.5 sm:px-5 py-3.5 hover:bg-tint/70 transition-colors ${t.reversed ? "opacity-50" : ""}`}>
+                  <span
+                    className={`flex-none w-9 h-9 rounded-full flex items-center justify-center ${
+                      t.direction === "credit" ? "bg-[#EFF8F2] text-pos" : "bg-[#FBEAE8] text-neg"
+                    }`}
+                  >
+                    {t.direction === "credit" ? <ArrowDownRight size={16} /> : <ArrowUpRight size={16} />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className={`m-0 font-semibold text-[13px] text-ink truncate ${t.reversed ? "line-through" : ""}`}>{t.description}</p>
+                      <span className="text-[9.5px] uppercase font-bold tracking-wide text-ink-2 bg-tint border border-border-lt rounded px-1.5 py-0.5">
+                        {t.channel}
+                      </span>
+                    </div>
+                    <p className="m-0 mt-0.5 text-[11px] text-ink-2 truncate">
+                      {t.direction === "debit" && t.beneficiary
+                        ? `To: ${t.beneficiary}${t.beneficiaryBank ? ` (${t.beneficiaryBank})` : ""}`
+                        : t.direction === "credit"
+                          ? `From: ${t.counterparty}`
+                          : t.sub}
+                      {" · "}
+                      {t.date} {t.time} · UTR {t.utr || t.ref}
+                    </p>
+                  </div>
+                  <div className="flex-none flex items-center gap-3">
+                    <div className="hidden sm:block">
+                      <StatusTag status={t.status} />
+                    </div>
+                    <div className="text-right">
+                      <div className={`font-num tabular-nums font-bold text-[13.5px] ${t.direction === "credit" ? "text-pos" : "text-neg"}`}>
+                        {t.direction === "credit" ? "+ " : "− "}
+                        {formatCode(t.amount, "INR")}
+                      </div>
+                      <div className="text-[10.5px] text-ink-2 font-num tabular-nums mt-0.5">
+                        Bal {displayMoney(balanceAfter, "INR", balancesHidden)}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-ink-2 hover:text-navy"
+                      title="Receipt"
+                    >
+                      <Printer size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-5">
+          <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-4.5 py-3.5 border-b border-border-lt">
+              <h3 className="m-0 text-[13px] font-bold text-navy">Currency Ledgers</h3>
+              <p className="m-0 mt-0.5 text-[11px] text-ink-2">{store.balances.length} ledgers linked to {user.accountNumber}</p>
+            </div>
+            <div className="divide-y divide-border-lt">
+              {store.balances.map((b) => (
+                <div key={b.currency} className="flex items-center justify-between gap-3 px-4.5 py-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="flex-none w-8 h-8 rounded-full bg-[#EAF1F9] text-navy text-[10.5px] font-bold flex items-center justify-center">
+                      {b.currency}
+                    </span>
+                    <span className="text-[12px] text-ink-2 truncate">{b.note}</span>
+                  </div>
+                  <span className="font-num tabular-nums font-bold text-[12.5px] text-navy flex-none">
+                    {displayMoney(b.amount, b.currency, balancesHidden)}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-4 flex-wrap px-4.5 py-3 text-xs text-ink-2 mt-auto">
-            <span>
-              <span className="inline-block w-1.75 h-1.75 rounded-full bg-pos mr-1.5" />
-              Electronic clearing enabled: IMPS, NEFT, RTGS, 2WF Direct
-            </span>
-            <span>
-              Daily transfer limit: <strong>{formatCode(user.dailyDomesticLimit, "INR")}</strong>
-            </span>
-          </div>
-        </Panel>
-
-        <Panel className="mb-0 flex flex-col">
-          <PanelHead title="Quick Banking Actions" />
-          <p className="px-4.5 mt-2 text-[11px] text-ink-2">Frequently executed Indian banking operations</p>
-          <div className="grid grid-cols-2 gap-3 px-4.5 py-3.5 max-[620px]:grid-cols-1">
-            <Link to="/transfer" className="border border-border-lt rounded-lg px-3.5 py-3 no-underline text-inherit hover:border-gold-dk">
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-600 mb-2">
-                <Send size={15} />
-              </span>
-              <strong className="block text-[13px] text-navy">Transfer Funds</strong>
-              <span className="block text-[11px] text-blue-600 font-semibold mt-0.5">IMPS / NEFT / 2WF</span>
-            </Link>
-            <Link to="/beneficiaries" className="border border-border-lt rounded-lg px-3.5 py-3 no-underline text-inherit hover:border-gold-dk">
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-50 text-purple-600 mb-2">
-                <UserPlus size={15} />
-              </span>
-              <strong className="block text-[13px] text-navy">Add Payee</strong>
-              <span className="block text-[11px] text-purple-600 font-semibold mt-0.5">Indian Bank / 2WF</span>
-            </Link>
-            <button
-              type="button"
-              onClick={() => navigate("/pin-security")}
-              className="text-left border rounded-lg px-3.5 py-3 border-[#DDC98B] bg-[#FBF4E1]"
-            >
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white text-amber mb-2">
-                <KeyRound size={15} />
-              </span>
-              <strong className="block text-[13px] text-navy">9-Digit PIN</strong>
-              <span className="block text-[11px] text-amber font-semibold mt-0.5">Set / Reset PIN</span>
-            </button>
-            <Link to="/statements" className="border rounded-lg px-3.5 py-3 no-underline text-inherit border-[#A8D4BB] bg-[#EFF8F2]">
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white text-pos mb-2">
-                <FileText size={15} />
-              </span>
-              <strong className="block text-[13px] text-navy">e-Passbook</strong>
-              <span className="block text-[11px] text-pos font-semibold mt-0.5">Ledger Statement</span>
-            </Link>
-          </div>
-          <div className="flex items-center justify-between gap-2.5 px-4.5 py-3 border-t border-border-lt text-xs">
-            <span>9-digit security PIN status</span>
-            <Tag variant="completed">{user.pinStatus}</Tag>
-          </div>
-          <p className="px-4.5 pb-3.5 text-xs text-ink-2">Required before authorising fund transfers and beneficiary payouts.</p>
-        </Panel>
-      </div>
-
-      {/* Recent domestic ledger activity */}
-      <Panel>
-        <div className="flex items-center justify-between gap-3 flex-wrap px-4.5 py-3.5 border-b border-border-lt">
-          <div>
-            <h3 className="m-0 text-[13.5px] font-bold text-navy">Recent Account Transactions &amp; UTR Postings</h3>
-            <p className="m-0 mt-0.5 text-[11px] text-ink-2">Live verified entries from 2 Way Fund core clearing ledger</p>
-          </div>
-          <Link to="/statements" className="text-[12px] font-semibold text-navy-lt flex items-center gap-1 no-underline hover:underline">
-            View Full Passbook &amp; Statements <ChevronRight size={14} />
-          </Link>
         </div>
-        <PanelBody flush>
-          <TableWrap>
-            <table className="w-full border-collapse text-[12.5px]">
-              <thead>
-                <tr>
-                  <Th width={110}>Date &amp; Time</Th>
-                  <Th width={160}>UTR / Ref No</Th>
-                  <Th>Description &amp; Beneficiary</Th>
-                  <Th width={110}>Status</Th>
-                  <Th width={140} right>
-                    Amount (INR)
-                  </Th>
-                  <Th width={140} right>
-                    Balance After
-                  </Th>
-                  <Th width={90} right>
-                    Receipt
-                  </Th>
-                </tr>
-              </thead>
-              <tbody>
-                {inrLedgerTx.length === 0 ? (
-                  <EmptyRow colSpan={7}>No domestic ledger entries yet.</EmptyRow>
-                ) : (
-                  inrLedgerTx.slice(0, 6).map(({ t, balanceAfter }) => (
-                    <tr key={t.ref} className={t.reversed ? "opacity-50 line-through" : ""}>
-                      <Td className="font-num">
-                        <CellStrong>{t.date}</CellStrong>
-                        <CellSub>{t.time}</CellSub>
-                      </Td>
-                      <Td className="font-num">
-                        <CellStrong>{t.utr || t.ref}</CellStrong>
-                        {t.utr ? <CellSub>Ref: {t.ref}</CellSub> : null}
-                      </Td>
-                      <Td>
-                        <CellStrong>{t.description}</CellStrong>
-                        <CellSub>
-                          {t.direction === "debit" && t.beneficiary
-                            ? `To: ${t.beneficiary}${t.beneficiaryBank ? ` (${t.beneficiaryBank})` : ""}`
-                            : t.direction === "credit"
-                              ? `From: ${t.counterparty}`
-                              : t.sub}
-                        </CellSub>
-                        <span className="inline-block mt-1 text-[10px] uppercase font-semibold text-ink-2 bg-tint border border-border-lt rounded px-1.5 py-0.5">
-                          {t.channel}
-                        </span>
-                      </Td>
-                      <Td>
-                        <StatusTag status={t.status} />
-                      </Td>
-                      <Td right className={`font-num tabular-nums font-semibold ${t.direction === "credit" ? "text-pos" : "text-neg"}`}>
-                        {t.direction === "credit" ? "+ " : "− "}
-                        {formatCode(t.amount, "INR")}
-                      </Td>
-                      <Td right className="font-num tabular-nums">
-                        {displayMoney(balanceAfter, "INR", balancesHidden)}
-                      </Td>
-                      <Td right>
-                        <button
-                          type="button"
-                          onClick={() => window.print()}
-                          className="text-navy-lt text-xs font-semibold hover:underline inline-flex items-center gap-1"
-                        >
-                          <Printer size={12} /> Receipt
-                        </button>
-                      </Td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </TableWrap>
-        </PanelBody>
-      </Panel>
-
-      {/* Currency ledgers */}
-      <Panel>
-        <PanelHead title="Currency Ledgers" note={`Account ${user.accountNumber} · ${store.balances.length} currency ledgers`} />
-        <PanelBody flush>
-          <TableWrap>
-            <table className="w-full border-collapse text-[12.5px]">
-              <thead>
-                <tr>
-                  <Th>Ledger</Th>
-                  <Th width={90}>Currency</Th>
-                  <Th width={180} right>
-                    Available balance
-                  </Th>
-                </tr>
-              </thead>
-              <tbody>
-                {store.balances.map((b) => (
-                  <tr key={b.currency}>
-                    <Td>{b.note}</Td>
-                    <Td>
-                      <CellStrong>{b.currency}</CellStrong>
-                    </Td>
-                    <Td right className="font-num tabular-nums">
-                      <CellStrong>{displayMoney(b.amount, b.currency, balancesHidden)}</CellStrong>
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TableWrap>
-        </PanelBody>
-      </Panel>
-
-      {/* Rates + advisory */}
-      <div className="grid gap-4.5 mb-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px,1fr))" }}>
-        <Panel className="mb-0">
-          <PanelHead title="Indicative Rates" />
-          <PanelBody>
-            <ul className="list-none m-0 p-0">
-              {(["EUR", "INR", "GBP"] as const).map((code) => (
-                <li key={code} className="flex items-center justify-between py-1.5 border-b border-dotted border-border last:border-b-0 text-[12.5px]">
-                  <span>USD → {code}</span>
-                  <span className="font-num tabular-nums">{store.rates[code].toFixed(4)}</span>
-                </li>
-              ))}
-            </ul>
-            <Note className="mt-2">Illustrative table. Not live market data.</Note>
-          </PanelBody>
-        </Panel>
-        <Panel className="mb-0">
-          <PanelHead title="Security Advisory" />
-          <PanelBody>
-            <p className="text-[12.5px] mb-2">
-              <strong>Never share</strong> your password, transaction password or OTP with anyone — including anyone claiming to be from the
-              institution.
-            </p>
-            <p className="text-[12.5px] m-0">
-              <strong>No legitimate bank</strong> will ever ask you to make a payment to unlock, verify or release funds already shown in your
-              account. Any such request is a fraud attempt.
-            </p>
-          </PanelBody>
-        </Panel>
       </div>
-
-      {/* Recent transactions */}
-      {/* <Panel>
-        <PanelHead title="Recent Transactions" note="Last 8 entries — all ledgers" />
-        <PanelBody flush>
-          <TableWrap>
-            <table className="w-full border-collapse text-[12.5px]">
-              <thead>
-                <tr>
-                  <Th width={100}>Date</Th>
-                  <Th>Particulars</Th>
-                  <Th width={120}>Status</Th>
-                  <Th width={165} right>
-                    Amount
-                  </Th>
-                </tr>
-              </thead>
-              <tbody>
-                {store.transactions.slice(0, 8).map((t) => (
-                  <tr key={t.ref}>
-                    <Td className="font-num">{t.date}</Td>
-                    <Td>
-                      <CellStrong>{t.description}</CellStrong>
-                      <span className="block text-[11px] text-ink-2 mt-0.5">{t.sub}</span>
-                    </Td>
-                    <Td>
-                      <StatusTag status={t.status} />
-                    </Td>
-                    <Td right className={`font-num tabular-nums font-semibold ${t.direction === "credit" ? "text-pos" : "text-neg"}`}>
-                      {t.direction === "credit" ? "+ " : "− "}
-                      {formatCode(t.amount, t.currency)}
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TableWrap>
-        </PanelBody>
-        <PanelBody>
-          <Note>
-            Status values follow the six-state model defined in the fund transaction security policy: <strong>Pending</strong>,{" "}
-            <strong>Processing</strong>, <strong>Completed</strong>, <strong>Failed</strong>, <strong>Rejected</strong> and{" "}
-            <strong>Under review</strong>. Entries marked <em>Under review</em> are held for compliance screening before settlement.
-          </Note>
-        </PanelBody>
-      </Panel> */}
     </>
   );
 }

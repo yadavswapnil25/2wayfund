@@ -14,7 +14,6 @@ import { BeneficiariesPage } from "./pages/customer/BeneficiariesPage";
 import { NomineesPage } from "./pages/customer/NomineesPage";
 import { PinSecurityPage } from "./pages/customer/PinSecurityPage";
 import { StatementsPage } from "./pages/customer/StatementsPage";
-import { InboxPage } from "./pages/customer/InboxPage";
 import { ExchangePage } from "./pages/customer/ExchangePage";
 import { UsdtPage } from "./pages/customer/UsdtPage";
 import { CardsPage } from "./pages/customer/CardsPage";
@@ -66,7 +65,6 @@ function AppRoutes() {
         <Route path="/domestic" element={<RouteGuard><DomesticPage /></RouteGuard>} />
         <Route path="/international" element={<RouteGuard><InternationalPage /></RouteGuard>} />
         <Route path="/statements" element={<RouteGuard><StatementsPage /></RouteGuard>} />
-        <Route path="/inbox" element={<RouteGuard><InboxPage /></RouteGuard>} />
         <Route path="/pin-security" element={<RouteGuard><PinSecurityPage /></RouteGuard>} />
         <Route path="/exchange" element={<RouteGuard><ExchangePage /></RouteGuard>} />
         <Route path="/usdt" element={<RouteGuard><UsdtPage /></RouteGuard>} />

@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { KeyRound, Lock } from "lucide-react";
+import { KeyRound, Lock, ShieldCheck } from "lucide-react";
 import { PageHead } from "../../components/ui/Flow";
-import { Panel, PanelBody, PanelHead } from "../../components/ui/Panel";
 import { Field, FormActions, FormGrid, TextInput } from "../../components/ui/Field";
 import { Btn } from "../../components/ui/Button";
-import { Callout, Note } from "../../components/ui/Misc";
+import { Note } from "../../components/ui/Misc";
 import { Tag } from "../../components/ui/Tag";
 import { CREDENTIALS, useApp } from "../../state/AppContext";
 
@@ -126,22 +125,21 @@ export function PinSecurityPage() {
         lede="Set or update the transaction PIN required before any interbank or internal fund transfer, and change the password used to sign in to NetBanking."
       />
 
-      <div className="grid gap-4.5 mb-4 items-stretch min-[1001px]:grid-cols-2">
-        <Panel className="mb-0 flex flex-col">
-          <PanelHead
-            title={
-              <>
-                <KeyRound size={14} className="inline -mt-0.5 mr-1.5" />
-                9-Digit Transaction PIN Setup
-              </>
-            }
-          />
-          <PanelBody>
-            <p className="mt-0 text-xs text-ink-2 mb-3">
-              A 9-digit PIN is strictly required before executing any interbank or internal fund transfer. Set or update your PIN here.
-            </p>
+      <div className="grid gap-5 mb-5 items-start min-[1001px]:grid-cols-2">
+        {/* PIN setup */}
+        <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center gap-3 px-4.5 sm:px-5 py-4 border-b border-border-lt">
+            <span className="flex-none w-10 h-10 rounded-xl bg-[#FBF4E1] text-amber flex items-center justify-center">
+              <KeyRound size={18} />
+            </span>
+            <div>
+              <h3 className="m-0 text-[14.5px] font-bold text-navy">9-Digit Transaction PIN Setup</h3>
+              <p className="m-0 mt-0.5 text-[11px] text-ink-2">Required before any interbank or internal transfer</p>
+            </div>
+          </div>
 
-            <div className="border border-border border-l-4 border-l-gold rounded-lg px-3.5 py-3 mb-4">
+          <div className="px-4.5 sm:px-5 py-4">
+            <div className="rounded-xl border border-border-lt bg-tint px-3.5 py-3 mb-4">
               <span className="text-[10.5px] uppercase text-ink-2 font-semibold">Transaction PIN status</span>
               <div className="flex items-center justify-between mt-1">
                 <strong className="text-sm text-navy">{active ? "Active & Configured" : "Not configured"}</strong>
@@ -151,9 +149,11 @@ export function PinSecurityPage() {
 
             {pinFormError ? <Note danger>{pinFormError}</Note> : null}
             {pinDone ? (
-              <div className="bg-[#F0F8F3] border border-[#A8D4BB] rounded-lg p-4 mb-3">
+              <div className="bg-[#F0F8F3] border border-[#A8D4BB] rounded-xl p-4 mb-3">
                 <h3 className="text-pos font-bold mb-2 text-sm">Transaction PIN set</h3>
-                <p className="m-0 text-xs">Your 9-digit transaction PIN has been set and activated. Use it wherever the transfer flow calls for a transaction password.</p>
+                <p className="m-0 text-xs">
+                  Your 9-digit transaction PIN has been set and activated. Use it wherever the transfer flow calls for a transaction password.
+                </p>
               </div>
             ) : null}
 
@@ -198,33 +198,50 @@ export function PinSecurityPage() {
             </FormGrid>
 
             {pinPending ? (
-              <OtpBox otp={pinOtp} otpInput={pinOtpInput} setOtpInput={setPinOtpInput} error={pinOtpError} onConfirm={confirmPinOtp} onCancel={() => { setPinPending(null); setPinOtp(""); }} />
+              <OtpBox
+                otp={pinOtp}
+                otpInput={pinOtpInput}
+                setOtpInput={setPinOtpInput}
+                error={pinOtpError}
+                onConfirm={confirmPinOtp}
+                onCancel={() => { setPinPending(null); setPinOtp(""); }}
+              />
             ) : null}
-          </PanelBody>
-        </Panel>
+          </div>
+        </div>
 
-        <Panel className="mb-0 flex flex-col">
-          <PanelHead
-            title={
-              <>
-                <Lock size={13} className="inline -mt-0.5 mr-1.5" />
-                Change NetBanking Password
-              </>
-            }
-          />
-          <PanelBody>
-            <p className="mt-0 text-xs text-ink-2 mb-3">Change your password using your current password or your official 8-digit bank secure code.</p>
+        {/* Password change */}
+        <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center gap-3 px-4.5 sm:px-5 py-4 border-b border-border-lt">
+            <span className="flex-none w-10 h-10 rounded-xl bg-[#EAF1F9] text-navy flex items-center justify-center">
+              <Lock size={17} />
+            </span>
+            <div>
+              <h3 className="m-0 text-[14.5px] font-bold text-navy">Change NetBanking Password</h3>
+              <p className="m-0 mt-0.5 text-[11px] text-ink-2">Used to sign in to your account</p>
+            </div>
+          </div>
 
+          <div className="px-4.5 sm:px-5 py-4">
             {pwFormError ? <Note danger>{pwFormError}</Note> : null}
             {pwDone ? (
-              <div className="bg-[#F0F8F3] border border-[#A8D4BB] rounded-lg p-4 mb-3">
+              <div className="bg-[#F0F8F3] border border-[#A8D4BB] rounded-xl p-4 mb-3">
                 <h3 className="text-pos font-bold mb-2 text-sm">Password updated</h3>
-                <p className="m-0 text-xs">Your NetBanking password has been changed. Use the new password next time you sign in — it applies for the rest of this browser session only.</p>
+                <p className="m-0 text-xs">
+                  Your NetBanking password has been changed. Use the new password next time you sign in — it applies for the rest of this browser
+                  session only.
+                </p>
               </div>
             ) : null}
 
             <FormGrid>
-              <Field label="Current password or 8-digit secure code" required wide error={pwErrors.auth} hint={!pwErrors.auth ? "Forgot password? Use your official 8-digit bank secure code — shown below for this demo." : undefined}>
+              <Field
+                label="Current password or 8-digit secure code"
+                required
+                wide
+                error={pwErrors.auth}
+                hint={!pwErrors.auth ? "Forgot password? Use your official 8-digit bank secure code — shown below for this demo." : undefined}
+              >
                 <TextInput type="password" value={pwAuth} onChange={(e) => setPwAuth(e.target.value)} hasError={!!pwErrors.auth} />
               </Field>
               <Field label="New password" required wide error={pwErrors.new} hint={!pwErrors.new ? "Minimum 6 characters" : undefined}>
@@ -245,24 +262,31 @@ export function PinSecurityPage() {
             </FormGrid>
 
             {pwPending ? (
-              <OtpBox otp={pwOtp} otpInput={pwOtpInput} setOtpInput={setPwOtpInput} error={pwOtpError} onConfirm={confirmPwOtp} onCancel={() => { setPwPending(null); setPwOtp(""); }} />
+              <OtpBox
+                otp={pwOtp}
+                otpInput={pwOtpInput}
+                setOtpInput={setPwOtpInput}
+                error={pwOtpError}
+                onConfirm={confirmPwOtp}
+                onCancel={() => { setPwPending(null); setPwOtp(""); }}
+              />
             ) : null}
-          </PanelBody>
-        </Panel>
+          </div>
+        </div>
       </div>
 
-      <Panel>
-        <PanelHead title="On the 8-Digit Secure Code" />
-        <PanelBody>
-          <Callout title="Never share your password, PIN or one-time code" variant="warn">
-            <p>
-              The institution will never ask you to disclose your password, transaction PIN, secure code or a one-time code — by telephone,
-              email, message or any other channel — and will never ask you to make a payment to reset or unlock either credential. A request of
-              that kind is a fraud attempt however convincing it looks.
-            </p>
-          </Callout>
-        </PanelBody>
-      </Panel>
+      {/* Security advisory */}
+      <div className="rounded-2xl border border-[#DDC98B] bg-[#FBF4E1] px-4.5 sm:px-5 py-4">
+        <div className="flex items-center gap-2 mb-2">
+          <ShieldCheck size={15} className="text-amber" />
+          <h3 className="m-0 text-[13px] font-bold text-navy">On the 8-Digit Secure Code</h3>
+        </div>
+        <p className="text-[12.5px] leading-relaxed m-0 text-ink">
+          The institution will never ask you to disclose your password, transaction PIN, secure code or a one-time code — by telephone, email,
+          message or any other channel — and will never ask you to make a payment to reset or unlock either credential. A request of that kind is
+          a fraud attempt however convincing it looks.
+        </p>
+      </div>
     </>
   );
 }
@@ -283,9 +307,9 @@ function OtpBox({
   onCancel: () => void;
 }) {
   return (
-    <div className="bg-tint border border-border-lt rounded-lg p-4 mt-4 text-[12.5px]">
+    <div className="bg-tint border border-border-lt rounded-xl p-4 mt-4 text-[12.5px]">
       <span className="block font-bold text-navy mb-2">Confirm with one-time password — displayed, never sent</span>
-      <div className="inline-block font-num text-[26px] font-bold tracking-widest text-navy bg-white border border-border rounded-md px-4 py-2 my-1.5">
+      <div className="inline-block font-num text-[26px] font-bold tracking-widest text-navy bg-white border border-border rounded-lg px-4 py-2 my-1.5">
         {otp}
       </div>
       <div>Generated in this browser and shown here so the step can be demonstrated. Nothing is transmitted.</div>
@@ -294,7 +318,7 @@ function OtpBox({
           value={otpInput}
           onChange={(e) => setOtpInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && onConfirm()}
-          className="w-[140px] font-num text-[15px] px-2.5 py-2 border border-border rounded-[5px]"
+          className="w-[140px] font-num text-[15px] px-2.5 py-2 border border-border rounded-lg"
           aria-label="One-time password"
         />
         <Btn variant="approve" onClick={onConfirm}>

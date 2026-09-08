@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Eye, EyeOff, Printer } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Check, CheckCircle2, Eye, EyeOff, KeyRound, Landmark, Printer, ShieldAlert, ShieldCheck, Zap } from "lucide-react";
 import { PageHead } from "../../components/ui/Flow";
-import { Panel, PanelBody, PanelHead } from "../../components/ui/Panel";
 import { Field, TextInput } from "../../components/ui/Field";
 import { Btn } from "../../components/ui/Button";
-import { Callout, DetailGrid, Note, ReviewLine } from "../../components/ui/Misc";
+import { DetailGrid, Note, ReviewLine } from "../../components/ui/Misc";
 import { Stepper, WizActions } from "../../components/ui/Stepper";
 import { Tag } from "../../components/ui/Tag";
 import { Modal } from "../../components/ui/Modal";
@@ -16,6 +15,8 @@ import { displayMoney, formatCode } from "../../lib/format";
 import { amountInWordsInr } from "../../lib/words";
 import { clockTime, today, todayIso } from "../../lib/dates";
 import type { Transaction } from "../../types/data";
+
+const CHANNEL_ICONS: Record<string, typeof Zap> = { IMPS: Zap, NEFT: Landmark, RTGS: Building2 };
 
 function parseAmount(raw: string): number {
   const cleaned = raw.replace(/[^0-9.]/g, "");
@@ -208,7 +209,7 @@ export function TransferFundsPage() {
         lede="Transfer to Indian Commercial Banks (IMPS / NEFT / RTGS) or internal 2 Way Fund accounts. No money moves — settlement is simulated against the in-memory ledger."
       />
 
-      <Panel>
+      <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden mb-5">
         <Stepper
           current={stage}
           steps={[
@@ -219,8 +220,8 @@ export function TransferFundsPage() {
         />
 
         {stage === 1 ? (
-          <div className="p-4.5">
-            <div className="flex items-center justify-between gap-3.5 flex-wrap bg-tint border border-border-lt rounded-lg px-4 py-3.5 mb-4.5">
+          <div className="p-4.5 sm:p-5">
+            <div className="flex items-center justify-between gap-3.5 flex-wrap rounded-2xl border border-border-lt bg-tint px-4.5 py-4 mb-4.5">
               <div>
                 <span className="text-[10.5px] uppercase text-ink-2 font-semibold">From account (debit)</span>
                 <strong className="block mt-0.5 text-sm text-navy">Saving Account · {store.user.accountNumber}</strong>
@@ -243,7 +244,7 @@ export function TransferFundsPage() {
               <select
                 value={beneId}
                 onChange={(e) => setBeneId(e.target.value)}
-                className="w-full text-[13px] px-2.5 py-2 border border-border bg-white rounded-[5px]"
+                className="w-full text-[13px] px-2.5 py-2 border border-border bg-white rounded-lg focus:outline-none focus:border-navy-lt focus:ring-2 focus:ring-navy-lt/20"
               >
                 <option value="">Select a beneficiary…</option>
                 {store.beneficiaries.map((b) => {
@@ -261,7 +262,7 @@ export function TransferFundsPage() {
             </Field>
 
             {beneficiary ? (
-              <div className="bg-tint border border-border-lt px-3.5 py-3 mt-3 text-[12.5px]">
+              <div className="rounded-2xl border border-border-lt bg-tint px-4.5 py-3.5 mt-3 text-[12.5px]">
                 <ReviewLine k="Account" v={beneficiary.account} />
                 <ReviewLine k="Routing" v={beneCodeLabel(beneficiary)} />
                 <ReviewLine k="Country / currency" v={`${beneficiary.country} · ${beneficiary.currency}`} />
@@ -275,19 +276,26 @@ export function TransferFundsPage() {
 
             <Field label="Transfer Payment Mode" required wide className="mt-4.5">
               <div className="grid grid-cols-3 gap-2.5 max-[560px]:grid-cols-1 mt-1.5">
-                {TRANSFER_CHANNELS.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setChannelId(c.id)}
-                    className={`px-2.5 py-3 text-center rounded-lg border cursor-pointer ${
-                      channelId === c.id ? "border-navy-lt bg-[#EAF1F9] shadow-[inset_0_0_0_1px_var(--color-navy-lt)]" : "border-border bg-white"
-                    }`}
-                  >
-                    <strong className={`block text-[13px] font-bold ${channelId === c.id ? "text-navy" : "text-ink"}`}>{c.label}</strong>
-                    <span className="block mt-0.5 text-[10.5px] text-ink-2">{c.sub}</span>
-                  </button>
-                ))}
+                {TRANSFER_CHANNELS.map((c) => {
+                  const Icon = CHANNEL_ICONS[c.id];
+                  const active = channelId === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setChannelId(c.id)}
+                      className={`px-3.5 py-3.5 text-left rounded-2xl border cursor-pointer transition-colors ${
+                        active ? "border-navy-lt bg-[#EAF1F9] shadow-[inset_0_0_0_1px_var(--color-navy-lt)]" : "border-border-lt bg-white hover:border-navy-lt/50"
+                      }`}
+                    >
+                      <span className={`inline-flex items-center justify-center w-8 h-8 rounded-xl mb-2 ${active ? "bg-white text-navy" : "bg-tint text-ink-2"}`}>
+                        <Icon size={16} />
+                      </span>
+                      <strong className={`block text-[13px] font-bold ${active ? "text-navy" : "text-ink"}`}>{c.label}</strong>
+                      <span className="block mt-0.5 text-[10.5px] text-ink-2">{c.sub}</span>
+                    </button>
+                  );
+                })}
               </div>
             </Field>
 
@@ -302,41 +310,48 @@ export function TransferFundsPage() {
 
             <WizActions>
               <Btn variant="block" onClick={goToReview}>
-                Proceed to Review &amp; Authorization →
+                <span className="inline-flex items-center justify-center gap-1.5">
+                  Proceed to Review &amp; Authorization <ArrowRight size={13} />
+                </span>
               </Btn>
             </WizActions>
           </div>
         ) : null}
 
         {stage === 2 && beneficiary && quote ? (
-          <div className="p-4.5">
-            <Callout title="Review Transaction Details">
-              <p>Please verify the beneficiary account and transfer mode before final submission.</p>
-            </Callout>
+          <div className="p-4.5 sm:p-5">
+            <div className="rounded-2xl border border-border-lt bg-[#EAF1F9] px-4.5 py-4 mb-4">
+              <h3 className="m-0 text-[13.5px] font-bold text-navy">Review Transaction Details</h3>
+              <p className="m-0 mt-1.5 text-[12.5px] text-ink">Please verify the beneficiary account and transfer mode before final submission.</p>
+            </div>
 
-            <DetailGrid
-              items={[
-                ["Debit account", store.user.accountNumber, store.user.name],
-                ["Beneficiary payee", beneficiary.name, beneficiary.bankName || (beneficiary.internal ? "2 Way Fund International" : beneficiary.detail)],
-                ["Beneficiary account no", beneficiary.account],
-                ["IFSC / routing code", beneCodeLabel(beneficiary)],
-                ["Transfer channel", channel.label, channel.sub],
-                ["Transaction charges", quote.commissionRate ? `${formatCode(quote.commission, "INR")} (2%)` : `${formatCode(0, "INR")} (Nil)`],
-              ]}
-            />
+            <div className="rounded-2xl border border-border-lt bg-white px-4.5 py-4 mb-4">
+              <DetailGrid
+                items={[
+                  ["Debit account", store.user.accountNumber, store.user.name],
+                  ["Beneficiary payee", beneficiary.name, beneficiary.bankName || (beneficiary.internal ? "2 Way Fund International" : beneficiary.detail)],
+                  ["Beneficiary account no", beneficiary.account],
+                  ["IFSC / routing code", beneCodeLabel(beneficiary)],
+                  ["Transfer channel", channel.label, channel.sub],
+                  ["Transaction charges", quote.commissionRate ? `${formatCode(quote.commission, "INR")} (2%)` : `${formatCode(0, "INR")} (Nil)`],
+                ]}
+              />
+            </div>
 
-            <div className="flex items-center justify-between gap-3.5 flex-wrap bg-tint border border-border-lt rounded-lg px-4 py-3.5 mt-4">
+            <div className="flex items-center justify-between gap-3.5 flex-wrap rounded-2xl border border-border-lt bg-tint px-4.5 py-4">
               <div>
                 <span className="text-[10.5px] uppercase text-ink-2 font-semibold">Total amount to debit</span>
-                <div className="font-num tabular-nums text-[22px] font-bold text-navy mt-0.5">{displayMoney(quote.debit, "INR", balancesHidden)}</div>
+                <div className="font-num tabular-nums text-[24px] font-bold text-navy mt-0.5">{displayMoney(quote.debit, "INR", balancesHidden)}</div>
                 <span className="text-[11px] text-ink-2">{amountInWordsInr(quote.debit)} Only</span>
               </div>
               <Tag variant="processing">{channel.clearing}</Tag>
             </div>
 
-            <div className="border border-border border-l-4 border-l-gold rounded-lg px-3.5 py-3 mt-4.5">
+            <div className="rounded-2xl border border-[#DDC98B] bg-[#FBF4E1] px-4.5 py-4 mt-4.5">
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <h3 className="text-[13.5px] font-bold text-navy m-0">🔒 Enter 9-Digit Transaction Security PIN</h3>
+                <h3 className="text-[13.5px] font-bold text-navy m-0 flex items-center gap-1.5">
+                  <KeyRound size={15} className="text-amber" /> Enter 9-Digit Transaction Security PIN
+                </h3>
                 <button type="button" onClick={() => setPinVisible((v) => !v)} className="text-navy-lt text-xs font-semibold hover:underline flex items-center gap-1">
                   {pinVisible ? <EyeOff size={13} /> : <Eye size={13} />} {pinVisible ? "Hide PIN" : "Show PIN"}
                 </button>
@@ -348,7 +363,7 @@ export function TransferFundsPage() {
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, "").slice(0, 9))}
                 placeholder="Enter your 9 numeric digits"
-                className="w-full mt-2.5 text-[13px] px-2.5 py-2 border border-border rounded-[5px]"
+                className="w-full mt-2.5 text-[13px] px-2.5 py-2 border border-border rounded-lg bg-white focus:outline-none focus:border-navy-lt focus:ring-2 focus:ring-navy-lt/20"
               />
               <div className="flex items-center justify-between gap-2 flex-wrap mt-1.5">
                 <span className="text-[11px] text-ink-2">Digits entered: {pin.length} / 9</span>
@@ -360,7 +375,11 @@ export function TransferFundsPage() {
             </div>
 
             <WizActions>
-              <Btn onClick={() => setStage(1)}>← Back to Edit</Btn>
+              <Btn onClick={() => setStage(1)}>
+                <span className="inline-flex items-center gap-1.5">
+                  <ArrowLeft size={13} /> Back to Edit
+                </span>
+              </Btn>
               <Btn variant="approve" disabled={pin.length !== 9} onClick={authorize}>
                 Authorize &amp; Transfer {formatCode(quote.debit, "INR")}
               </Btn>
@@ -371,8 +390,8 @@ export function TransferFundsPage() {
         {stage === 3 && receipt ? (
           <div>
             <div className={`px-5 py-7 text-center border-b border-border-lt ${receipt.held ? "bg-[#FBF4E1]" : "bg-[#F0F8F3]"}`}>
-              <div className={`w-11.5 h-11.5 rounded-full text-white text-[22px] flex items-center justify-center mx-auto mb-3 ${receipt.held ? "bg-amber" : "bg-pos"}`}>
-                {receipt.held ? "!" : "✓"}
+              <div className={`w-12 h-12 rounded-full text-white flex items-center justify-center mx-auto mb-3 ${receipt.held ? "bg-amber" : "bg-pos"}`}>
+                {receipt.held ? <ShieldAlert size={22} /> : <CheckCircle2 size={22} />}
               </div>
               <h2 className="text-[19px] mb-1.5">{receipt.held ? "Submitted — Under Review" : "Payment Processed Successfully!"}</h2>
               <p className="m-0 text-ink-2 text-[12.5px]">
@@ -381,13 +400,15 @@ export function TransferFundsPage() {
                   : "Amount debited and credited to beneficiary account. Core ledger transaction is finalised."}
               </p>
             </div>
-            <div className="p-4.5">
-              <ReviewLine k="Bank UTR Number" v={receipt.utr} />
-              <ReviewLine k="Transaction Ref No" v={receipt.reference} />
-              <ReviewLine k="Beneficiary Payee" v={receipt.beneficiaryName} />
-              <ReviewLine k="Beneficiary Bank" v={receipt.beneficiaryBank} />
-              <ReviewLine k="Amount Transferred" v={formatCode(receipt.debit, "INR")} kind="total" />
-              <ReviewLine k="Updated Balance" v={displayMoney(receipt.balance, "INR", balancesHidden)} kind="total" />
+            <div className="p-4.5 sm:p-5">
+              <div className="rounded-2xl border border-border-lt bg-white px-4.5 py-2 mb-4">
+                <ReviewLine k="Bank UTR Number" v={receipt.utr} />
+                <ReviewLine k="Transaction Ref No" v={receipt.reference} />
+                <ReviewLine k="Beneficiary Payee" v={receipt.beneficiaryName} />
+                <ReviewLine k="Beneficiary Bank" v={receipt.beneficiaryBank} />
+                <ReviewLine k="Amount Transferred" v={formatCode(receipt.debit, "INR")} kind="total" />
+                <ReviewLine k="Updated Balance" v={displayMoney(receipt.balance, "INR", balancesHidden)} kind="total" />
+              </div>
 
               {receipt.held ? (
                 <Note className="mt-2">
@@ -399,44 +420,58 @@ export function TransferFundsPage() {
                 No money moved. Settlement is simulated against an in-memory ledger and a page reload restores the seeded balances.
               </Note>
 
-              <WizActions>
-                <Btn variant="primary" onClick={() => setVoucherOpen(true)}>
-                  Download / Print Official Receipt
-                </Btn>
-                <Btn onClick={resetAll}>Make Another Transfer</Btn>
-                <Link to="/statements" className="inline-block border rounded-[5px] px-4 py-2 text-xs font-semibold bg-white border-border no-underline text-ink">
-                  View in Passbook →
+              <div className="flex items-center gap-2.5 flex-wrap border-t border-border-lt pt-4 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setVoucherOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-navy-dk bg-gradient-to-b from-navy-lt to-navy px-4 py-2 text-xs font-semibold text-white shadow-sm hover:brightness-110"
+                >
+                  <Printer size={13} /> Download / Print Official Receipt
+                </button>
+                <button
+                  type="button"
+                  onClick={resetAll}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold text-ink hover:bg-tint"
+                >
+                  Make Another Transfer
+                </button>
+                <Link
+                  to="/statements"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold text-ink no-underline hover:bg-tint"
+                >
+                  View in Passbook <ArrowRight size={13} />
                 </Link>
-              </WizActions>
+              </div>
             </div>
           </div>
         ) : null}
-      </Panel>
+      </div>
 
-      <Panel>
-        <PanelHead title="Policy Flow Mapping" note="11 steps" />
-        <PanelBody>
-          <ol className="list-none m-0 p-0 flex flex-wrap gap-1.5">
-            {store.txFlow.map((step, i) => (
-              <li key={i} className="bg-tint border border-border-lt rounded-full px-3 py-1.5 text-[12px]">
-                {i + 1}. {step}
-              </li>
-            ))}
-          </ol>
-          <Note className="mt-3">
-            Steps 1–2 are satisfied by the login you completed to reach this page. Steps 3–4 (select beneficiary, enter transaction) are the
-            Details stage. Steps 5–7 (verify amount, transaction PIN, risk &amp; security check) are the Review &amp; PIN stage. Steps 8–11
-            (processing through reference number) are the Receipt stage. The full control model is documented under Security &amp; KYC.
-          </Note>
-        </PanelBody>
-      </Panel>
+      <div className="bg-white border border-border-lt rounded-2xl shadow-sm px-4.5 sm:px-5 py-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+          <h3 className="m-0 text-[14.5px] font-bold text-navy">Policy Flow Mapping</h3>
+          <span className="text-[11px] text-ink-2">11 steps</span>
+        </div>
+        <ol className="list-none m-0 p-0 flex flex-wrap gap-1.5">
+          {store.txFlow.map((step, i) => (
+            <li key={i} className="bg-tint border border-border-lt rounded-full px-3 py-1.5 text-[12px]">
+              {i + 1}. {step}
+            </li>
+          ))}
+        </ol>
+        <Note className="mt-3">
+          Steps 1–2 are satisfied by the login you completed to reach this page. Steps 3–4 (select beneficiary, enter transaction) are the
+          Details stage. Steps 5–7 (verify amount, transaction PIN, risk &amp; security check) are the Review &amp; PIN stage. Steps 8–11
+          (processing through reference number) are the Receipt stage. The full control model is documented under Security &amp; KYC.
+        </Note>
+      </div>
 
       {voucherOpen && receipt ? (
         <Modal
           title={
-            <>
-              🛡️ Official Bank Transaction Advisory Voucher
-            </>
+            <span className="flex items-center gap-1.5">
+              <ShieldCheck size={15} className="text-navy" /> Official Bank Transaction Advisory Voucher
+            </span>
           }
           onClose={() => setVoucherOpen(false)}
           footerExtra={
@@ -454,7 +489,9 @@ export function TransferFundsPage() {
             IFSC: {store.user.ifsc} · MICR: {store.user.micr}
           </p>
           <Tag variant={receipt.held ? "review" : "completed"} className="!inline-block mb-3">
-            Status: {receipt.held ? "Under Review" : "Successful"}
+            <span className="inline-flex items-center gap-1">
+              {receipt.held ? <ShieldAlert size={11} /> : <Check size={11} />} Status: {receipt.held ? "Under Review" : "Successful"}
+            </span>
           </Tag>
           <ReviewLine k="Bank UTR Number" v={receipt.utr} />
           <ReviewLine k="Core Reference ID" v={receipt.reference} />

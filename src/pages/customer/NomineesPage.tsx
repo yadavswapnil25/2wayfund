@@ -1,10 +1,9 @@
 import { useState } from "react";
+import { History, User, UserPlus, Users } from "lucide-react";
 import { PageHead } from "../../components/ui/Flow";
-import { Panel, PanelBody, PanelHead } from "../../components/ui/Panel";
 import { Field, FormActions, FormGrid, Select, TextArea, TextInput } from "../../components/ui/Field";
 import { Btn } from "../../components/ui/Button";
-import { Callout, Chip, Note } from "../../components/ui/Misc";
-import { DirectoryCard, DirectoryEmpty, DirectoryList } from "../../components/ui/DirectoryCard";
+import { Chip, Note } from "../../components/ui/Misc";
 import { Tag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
 import type { Nominee } from "../../types/data";
@@ -132,24 +131,38 @@ export function NomineesPage() {
         lede="Register who receives the balance on your accounts. Nomination applies across the whole relationship, and only one nominee can be registered at a time."
       />
 
-      <div className="grid gap-4.5 mb-4 items-stretch min-[1001px]:grid-cols-2">
-        <Panel className="mb-0 flex flex-col">
-          <PanelHead title={editingId ? `Update Nominee — ${name}` : "Add a Nominee"} note="Confirmation required" />
-          <PanelBody>
+      <div className="grid gap-5 mb-5 items-start min-[1001px]:grid-cols-2">
+        {/* Add / update nominee */}
+        <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center gap-3 px-4.5 sm:px-5 py-4 border-b border-border-lt">
+            <span className="flex-none w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+              <UserPlus size={17} />
+            </span>
+            <div>
+              <h3 className="m-0 text-[14.5px] font-bold text-navy">{editingId ? `Update Nominee — ${name}` : "Add a Nominee"}</h3>
+              <p className="m-0 mt-0.5 text-[11px] text-ink-2">Confirmation required</p>
+            </div>
+          </div>
+
+          <div className="px-4.5 sm:px-5 py-4">
             <p className="mt-0 text-xs text-ink-2 mb-3">
               Register the person who will receive your account balance. Only one nominee can be registered on this relationship at a time.
             </p>
             {confirmMsg ? (
-              <div className="bg-[#F0F8F3] border border-[#A8D4BB] rounded-lg p-4 mb-3">
+              <div className="bg-[#F0F8F3] border border-[#A8D4BB] rounded-xl p-4 mb-3">
                 <h3 className="text-pos font-bold mb-2 text-sm">Nominee registered</h3>
                 <p className="m-0 text-xs">{confirmMsg}</p>
               </div>
             ) : null}
 
             {blocked ? (
-              <Callout title="One nominee already registered">
-                <p>This relationship allows only one nominee at a time. Edit the existing nominee in the directory, or remove it first to register someone else.</p>
-              </Callout>
+              <div className="rounded-2xl border border-border-lt bg-[#EAF1F9] px-4.5 py-4">
+                <h3 className="m-0 text-[13px] font-bold text-navy">One nominee already registered</h3>
+                <p className="m-0 mt-1.5 text-[12.5px] text-ink">
+                  This relationship allows only one nominee at a time. Edit the existing nominee in the directory, or remove it first to register
+                  someone else.
+                </p>
+              </div>
             ) : (
               <>
                 <p className="text-[10.5px] uppercase text-ink-2 font-semibold mb-2">Quick relationship presets</p>
@@ -209,12 +222,12 @@ export function NomineesPage() {
             )}
 
             {pending ? (
-              <div className="bg-tint border border-border-lt rounded-lg p-4 mt-4 text-[12.5px]">
+              <div className="bg-tint border border-border-lt rounded-xl p-4 mt-4 text-[12.5px]">
                 <span className="block font-bold text-navy mb-2">Confirm with one-time password — displayed, never sent</span>
                 <div>
                   {editingId ? "Update " : "Register "} {pending.name} to confirm.
                 </div>
-                <div className="inline-block font-num text-[26px] font-bold tracking-widest text-navy bg-white border border-border rounded-md px-4 py-2 my-1.5">
+                <div className="inline-block font-num text-[26px] font-bold tracking-widest text-navy bg-white border border-border rounded-lg px-4 py-2 my-1.5">
                   {otp}
                 </div>
                 <div className="flex gap-2.5 flex-wrap items-center mt-2.5">
@@ -222,7 +235,7 @@ export function NomineesPage() {
                     value={otpInput}
                     onChange={(e) => setOtpInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && confirmOtp()}
-                    className="w-[140px] font-num text-[15px] px-2.5 py-2 border border-border rounded-[5px]"
+                    className="w-[140px] font-num text-[15px] px-2.5 py-2 border border-border rounded-lg"
                     aria-label="One-time password"
                   />
                   <Btn variant="approve" onClick={confirmOtp}>
@@ -233,83 +246,126 @@ export function NomineesPage() {
                 {otpError ? <div className="text-neg text-xs font-semibold mt-2.5">{otpError}</div> : null}
               </div>
             ) : null}
-          </PanelBody>
-        </Panel>
+          </div>
+        </div>
 
-        <Panel className="mb-0 flex flex-col">
-          <div className="flex items-center justify-between gap-4 flex-wrap px-3.5 py-2.5 bg-gradient-to-b from-[#F2F6FA] to-panel-head border-b border-border">
-            <div>
-              <h2 className="text-[13px] font-bold text-navy">Registered Nominee Directory</h2>
-              <p className="mt-0.5 text-[11px] text-ink-2">
-                {existing ? `${existing.name} is registered as your nominee` : "No nominee registered on your NetBanking profile"}
-              </p>
+        {/* Directory */}
+        <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between gap-3 flex-wrap px-4.5 sm:px-5 py-4 border-b border-border-lt">
+            <div className="flex items-center gap-3">
+              <span className="flex-none w-10 h-10 rounded-xl bg-[#EAF1F9] text-navy flex items-center justify-center">
+                <Users size={17} />
+              </span>
+              <div>
+                <h3 className="m-0 text-[14.5px] font-bold text-navy">Registered Nominee Directory</h3>
+                <p className="m-0 mt-0.5 text-[11px] text-ink-2">
+                  {existing ? `${existing.name} is registered as your nominee` : "No nominee registered on your NetBanking profile"}
+                </p>
+              </div>
             </div>
             <Tag variant="completed">
               {store.nominees.length} {store.nominees.length === 1 ? "Nominee" : "Nominees"}
             </Tag>
           </div>
-          <PanelBody>
-            <DirectoryList>
-              {store.nominees.length === 0 ? (
-                <DirectoryEmpty>No nominee registered. Add one using the form.</DirectoryEmpty>
-              ) : (
-                store.nominees.map((nm) => {
-                  const nmMinor = isMinorDob(nm.dob);
-                  return (
-                    <DirectoryCard
-                      key={nm.id}
-                      open={editingId === nm.id}
-                      name={nm.name}
-                      badge={
-                        <>
-                          <Tag variant="processing">{nm.relationship}</Tag>
-                          {nmMinor ? <Tag variant="pending">Minor</Tag> : null}
-                        </>
-                      }
-                      meta={[
-                        `DOB: ${nm.dob} · Age ${ageOn(nm.dob, todayIso())}`,
-                        ...(nmMinor ? [`Guardian: ${nm.guardianName || "—"}${nm.guardianRelationship ? ` (${nm.guardianRelationship})` : ""}`] : []),
-                      ]}
-                      sub={nm.address}
-                      actions={
-                        <>
-                          <Btn variant="primary" onClick={() => startEdit(nm)}>
-                            Edit
-                          </Btn>
-                          <Btn onClick={() => removeNominee(nm.id)}>Remove</Btn>
-                        </>
-                      }
-                    />
-                  );
-                })
-              )}
-            </DirectoryList>
-          </PanelBody>
-          <PanelBody>
-            <Note>A nominee under 18 cannot receive funds directly, so a guardian must be named at registration — the guardian holds the entitlement until the nominee reaches majority.</Note>
-          </PanelBody>
-        </Panel>
+
+          {store.nominees.length === 0 ? (
+            <p className="text-center py-10 text-ink-2 text-[12.5px]">No nominee registered. Add one using the form.</p>
+          ) : (
+            <div className="divide-y divide-border-lt">
+              {store.nominees.map((nm) => {
+                const nmMinor = isMinorDob(nm.dob);
+                const isOpen = editingId === nm.id;
+                return (
+                  <div
+                    key={nm.id}
+                    className={`flex items-start gap-3 px-4.5 sm:px-5 py-3.5 transition-colors flex-wrap sm:flex-nowrap ${isOpen ? "bg-[#F4F8FC]" : "hover:bg-tint/70"}`}
+                  >
+                    <span className="flex-none w-9 h-9 rounded-full bg-[#EAF1F9] text-navy flex items-center justify-center">
+                      <User size={16} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <strong className="text-[13px] text-ink truncate">{nm.name}</strong>
+                        <Tag variant="processing">{nm.relationship}</Tag>
+                        {nmMinor ? <Tag variant="pending">Minor</Tag> : null}
+                      </div>
+                      <p className="m-0 mt-0.5 text-[11px] text-ink-2 truncate">
+                        DOB: {nm.dob} · Age {ageOn(nm.dob, todayIso())}
+                      </p>
+                      {nmMinor ? (
+                        <p className="m-0 mt-0.5 text-[11px] text-ink-2 truncate">
+                          Guardian: {nm.guardianName || "—"}
+                          {nm.guardianRelationship ? ` (${nm.guardianRelationship})` : ""}
+                        </p>
+                      ) : null}
+                      <p className="m-0 mt-0.5 text-[11px] text-ink-2 truncate">{nm.address}</p>
+                    </div>
+                    <div className="flex-none flex items-center gap-2 mt-2 sm:mt-0 w-full sm:w-auto justify-end">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(nm)}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-navy-dk bg-gradient-to-b from-navy-lt to-navy px-3.5 py-1.5 text-xs font-semibold text-white hover:brightness-110"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeNominee(nm.id)}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-semibold text-ink hover:bg-tint"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="px-4.5 sm:px-5 py-3.5 border-t border-border-lt">
+            <Note>
+              A nominee under 18 cannot receive funds directly, so a guardian must be named at registration — the guardian holds the entitlement
+              until the nominee reaches majority.
+            </Note>
+          </div>
+        </div>
       </div>
 
-      <Panel>
-        <PanelHead title="Nomination History" note={`${store.nomineeAudit.length} ${store.nomineeAudit.length === 1 ? "entry" : "entries"}`} />
-        <PanelBody flush>
-          <ol className="list-none m-0 p-0">
+      {/* History */}
+      <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between gap-3 flex-wrap px-4.5 sm:px-5 py-4 border-b border-border-lt">
+          <div className="flex items-center gap-3">
+            <span className="flex-none w-10 h-10 rounded-xl bg-tint text-ink-2 flex items-center justify-center">
+              <History size={17} />
+            </span>
+            <h3 className="m-0 text-[14.5px] font-bold text-navy">Nomination History</h3>
+          </div>
+          <span className="text-[11px] text-ink-2">
+            {store.nomineeAudit.length} {store.nomineeAudit.length === 1 ? "entry" : "entries"}
+          </span>
+        </div>
+
+        {store.nomineeAudit.length === 0 ? (
+          <p className="text-center py-10 text-ink-2 text-[12.5px]">No nomination activity yet.</p>
+        ) : (
+          <div className="divide-y divide-border-lt">
             {store.nomineeAudit.map((entry, i) => (
-              <li key={i} className="flex gap-3 px-4.5 py-2.5 border-b border-border-lt last:border-b-0 text-xs">
-                <span className="text-ink-2">{entry.at}</span>
-                <span>{entry.action}</span>
-              </li>
+              <div key={i} className="flex items-center gap-3 px-4.5 sm:px-5 py-2.5 text-[12.5px]">
+                <span className="w-1.5 h-1.5 rounded-full bg-border flex-none" />
+                <span className="text-ink-2 font-num flex-none">{entry.at}</span>
+                <span className="text-ink">{entry.action}</span>
+              </div>
             ))}
-          </ol>
-        </PanelBody>
-        <PanelBody>
+          </div>
+        )}
+
+        <div className="px-4.5 sm:px-5 py-3.5 border-t border-border-lt">
           <Note>
-            Every registration, variation and cancellation is recorded. A nomination change is never actioned over the telephone, and nobody
-            from the institution will ask you for a password or one-time code to make one on your behalf.
+            Every registration, variation and cancellation is recorded. A nomination change is never actioned over the telephone, and nobody from
+            the institution will ask you for a password or one-time code to make one on your behalf.
           </Note>
-        </PanelBody>
-      </Panel>
+        </div>
+      </div>
     </>
   );
 }

@@ -1,8 +1,8 @@
-import { Bell, LogOut, Menu } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { useApp } from "../../state/AppContext";
 import { monogram } from "../../lib/format";
+import { NotificationsMenu } from "./NotificationsMenu";
 
 export function Brandbar({ onToggleNav }: { onToggleNav: () => void }) {
   const { session, logout, store } = useApp();
@@ -50,15 +50,7 @@ export function Brandbar({ onToggleNav }: { onToggleNav: () => void }) {
 
         {signedIn ? (
           <div className="flex items-center gap-3.5 flex-wrap">
-            {session.role === "customer" ? (
-              <Link
-                to="/inbox"
-                aria-label="Bank Notices"
-                className="relative text-ink-2 border border-border-lt bg-white p-2 rounded-full hover:bg-tint"
-              >
-                <Bell size={14} />
-              </Link>
-            ) : null}
+            {session.role === "customer" ? <NotificationsMenu /> : null}
 
             <div className="flex items-center gap-2.5">
               {session.role === "customer" && !avatarError ? (
