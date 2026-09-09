@@ -38,10 +38,15 @@ import {
 export function PrivacyPolicyPage() {
   return (
     <>
-      <PageHead title="Privacy Policy" lede="What this prototype actually collects: nothing." />
+      <PageHead title="Privacy Policy" lede="What this prototype actually collects: almost nothing." />
 
-      <Callout title="No server, no database, no cookie, no storage API" variant="info">
-        <p>This file makes no network requests. Anything typed into a form here lives only in a JavaScript variable in your browser tab and is discarded on reload.</p>
+      <Callout title="Client-only, with one exception" variant="info">
+        <p>
+          Nearly every page here makes no network requests — anything typed into a form lives only in a JavaScript variable in your
+          browser tab and is discarded on reload. The one exception is Open an Account: that form submits to a demonstration backend and
+          the application record is stored in a database for this case study, so the compliance-review flow it feeds has something real
+          to work against. No payment is collected and no identity document is requested or stored.
+        </p>
       </Callout>
 
       <Panel>

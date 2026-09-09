@@ -11,6 +11,7 @@ export interface RouteDef {
 export const ROUTES: RouteDef[] = [
   { path: "/login", tab: null, crumb: "Customer Login", access: "public" },
   { path: "/admin-login", tab: null, crumb: "Staff Login", access: "public" },
+  { path: "/set-password", tab: null, crumb: "Set Your Password", access: "public" },
   { path: "/denied", tab: null, crumb: "Access Denied", access: "public" },
   { path: "/", tab: "Account & Passbook", crumb: "Accounts › Account & Passbook", group: "Accounts", access: "customer" },
   { path: "/transfer", tab: "Transfer Funds", crumb: "Transfers › Transfer Funds", group: "Transfers", access: "customer" },

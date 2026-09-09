@@ -4,12 +4,15 @@ function pad2(n: number | string): string {
   return String(n).length < 2 ? "0" + n : String(n);
 }
 
-export function stamp(): string {
-  const d = new Date();
+export function formatStamp(d: Date): string {
   return (
     pad2(d.getDate()) + " " + MONTHS[d.getMonth()] + " " + d.getFullYear() +
     " " + pad2(d.getHours()) + ":" + pad2(d.getMinutes())
   );
+}
+
+export function stamp(): string {
+  return formatStamp(new Date());
 }
 
 export function today(): string {

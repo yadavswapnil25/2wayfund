@@ -5,15 +5,30 @@ import { PageHead } from "../../components/ui/Flow";
 import { Stepper } from "../../components/ui/Stepper";
 import { Field, FormActions, FormGrid, Select, TextInput } from "../../components/ui/Field";
 import { Btn } from "../../components/ui/Button";
-import { Note } from "../../components/ui/Misc";
+import { Callout, Note } from "../../components/ui/Misc";
 import { Modal } from "../../components/ui/Modal";
 import { useApp } from "../../state/AppContext";
 import { REFERRERS } from "../../data/constants";
 import { REFERRAL_FORMAT } from "../../lib/validators";
-import { stamp, today } from "../../lib/dates";
 import { freshKyc } from "../../lib/kyc";
 import { formatCode } from "../../lib/format";
+import { ApiError } from "../../services/apiClient";
+import { submitApplication } from "../../services/applicationService";
 import type { Application } from "../../types/data";
+
+/** Maps the backend's snake_case validation field names onto this form's
+ * local per-field error keys. Fields with no dedicated error slot (country,
+ * tier, purpose, referral) fall back to the general submit-error banner —
+ * their selects are always populated from store data, and referral was
+ * already gated in Step 1, so a server-side rejection there is an edge
+ * case, not a normal-path per-field validation failure. */
+const FIELD_ERROR_MAP: Record<string, string> = {
+  name: "f-name",
+  father_name: "f-father",
+  email: "f-email",
+  age_confirmed: "f-age",
+  terms_accepted: "f-terms",
+};
 
 const STEPS = [
   { label: "Referral code", sub: "Verify eligibility" },
@@ -44,6 +59,8 @@ export function OpenAccountPage() {
   const [errors, setErrors] = useState<Record<string, string | null>>({});
   const [showTerms, setShowTerms] = useState(false);
   const [submitted, setSubmitted] = useState<Application | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const selectedTier = store.tiers.find((t) => t.name === tier) ?? null;
 
@@ -111,37 +128,38 @@ export function OpenAccountPage() {
     return ok;
   }
 
-  function nextRef(): string {
-    return "2WF-APP-" + (10233 + store.applications.length + 1 + Math.floor(Math.random() * 90));
-  }
+  async function submit() {
+    if (!verifiedCode || !validate() || submitting) return;
 
-  function submit() {
-    if (!verifiedCode || !validate()) return;
+    setSubmitError(null);
+    setSubmitting(true);
+    try {
+      const result = await submitApplication({
+        name: name.trim(),
+        fatherName: fatherName.trim(),
+        email: email.trim(),
+        country,
+        tier,
+        purpose,
+        referral: verifiedCode,
+        ageConfirmed,
+        termsAccepted,
+      });
 
-    const submittedAt = stamp();
-    const application: Application = {
-      ref: nextRef(),
-      name: name.trim(),
-      fatherName: fatherName.trim(),
-      email: email.trim(),
-      country,
-      tier,
-      purpose,
-      referral: verifiedCode,
-      referrer: REFERRERS[verifiedCode],
-      termsAcceptedAt: submittedAt,
-      submitted: today(),
-      status: "Submitted",
-      kyc: freshKyc(),
-      audit: [
-        { at: submittedAt, actor: "Applicant", action: `Referral code ${verifiedCode} verified` },
-        { at: submittedAt, actor: "Applicant", action: "Terms & conditions accepted" },
-        { at: submittedAt, actor: "Applicant", action: "Application submitted" },
-      ],
-    };
-
-    setStore((s) => ({ ...s, applications: [application, ...s.applications] }));
-    setSubmitted(application);
+      const application: Application = { ...result, kyc: freshKyc() };
+      setStore((s) => ({ ...s, applications: [application, ...s.applications] }));
+      setSubmitted(application);
+    } catch (err) {
+      if (err instanceof ApiError && err.fieldErrors) {
+        for (const [field, messages] of Object.entries(err.fieldErrors)) {
+          const localKey = FIELD_ERROR_MAP[field];
+          if (localKey) setErr(localKey, messages[0]);
+        }
+      }
+      setSubmitError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function startNew() {
@@ -158,6 +176,7 @@ export function OpenAccountPage() {
     setAgeConfirmed(false);
     setTermsAccepted(false);
     setErrors({});
+    setSubmitError(null);
   }
 
   function fillSample() {
@@ -194,8 +213,9 @@ export function OpenAccountPage() {
               </div>
             </div>
 
-            <Field label="Referral code" required error={codeError} className="max-w-xs">
+            <Field label="Referral code" htmlFor="oa-referral" required error={codeError} className="max-w-xs">
               <TextInput
+                id="oa-referral"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && verifyCode()}
@@ -243,37 +263,50 @@ export function OpenAccountPage() {
             </span>
             <div>
               <h3 className="m-0 text-[14.5px] font-bold text-navy">Applicant Details</h3>
-              <p className="m-0 mt-0.5 text-[11px] text-ink-2">Everything here stays in this browser tab</p>
+              <p className="m-0 mt-0.5 text-[11px] text-ink-2">Submitted for compliance review — no account is opened yet</p>
             </div>
           </div>
 
           <div className="px-4.5 sm:px-5 py-4">
             <FormGrid>
-              <Field label="Full name" required error={errors["f-name"]}>
-                <TextInput value={name} onChange={(e) => setName(e.target.value)} hasError={!!errors["f-name"]} autoComplete="off" />
+              <Field label="Full name" htmlFor="oa-name" required error={errors["f-name"]}>
+                <TextInput id="oa-name" value={name} onChange={(e) => setName(e.target.value)} hasError={!!errors["f-name"]} autoComplete="off" />
               </Field>
-              <Field label="Father's / husband's name" required error={errors["f-father"]}>
-                <TextInput value={fatherName} onChange={(e) => setFatherName(e.target.value)} hasError={!!errors["f-father"]} autoComplete="off" />
+              <Field label="Father's / husband's name" htmlFor="oa-father" required error={errors["f-father"]}>
+                <TextInput
+                  id="oa-father"
+                  value={fatherName}
+                  onChange={(e) => setFatherName(e.target.value)}
+                  hasError={!!errors["f-father"]}
+                  autoComplete="off"
+                />
               </Field>
-              <Field label="Email" required wide error={errors["f-email"]}>
-                <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} hasError={!!errors["f-email"]} autoComplete="off" />
+              <Field label="Email" htmlFor="oa-email" required wide error={errors["f-email"]}>
+                <TextInput
+                  id="oa-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  hasError={!!errors["f-email"]}
+                  autoComplete="off"
+                />
               </Field>
-              <Field label="Country of residence">
-                <Select value={country} onChange={(e) => setCountry(e.target.value)}>
+              <Field label="Country of residence" htmlFor="oa-country">
+                <Select id="oa-country" value={country} onChange={(e) => setCountry(e.target.value)}>
                   {store.countries.map((c) => (
                     <option key={c}>{c}</option>
                   ))}
                 </Select>
               </Field>
-              <Field label="Purpose of account">
-                <Select value={purpose} onChange={(e) => setPurpose(e.target.value)}>
+              <Field label="Purpose of account" htmlFor="oa-purpose">
+                <Select id="oa-purpose" value={purpose} onChange={(e) => setPurpose(e.target.value)}>
                   {store.purposes.map((p) => (
                     <option key={p}>{p}</option>
                   ))}
                 </Select>
               </Field>
-              <Field label="Account tier" wide>
-                <Select value={tier} onChange={(e) => setTier(e.target.value)}>
+              <Field label="Account tier" htmlFor="oa-tier" wide>
+                <Select id="oa-tier" value={tier} onChange={(e) => setTier(e.target.value)}>
                   {store.tiers.map((t) => (
                     <option key={t.name} value={t.name}>
                       {t.name} — {t.segment}
@@ -290,14 +323,26 @@ export function OpenAccountPage() {
 
               <Field wide error={errors["f-age"]}>
                 <label className="flex items-start gap-2 text-[12px] text-ink cursor-pointer">
-                  <input type="checkbox" checked={ageConfirmed} onChange={(e) => setAgeConfirmed(e.target.checked)} className="mt-0.5" />
+                  <input
+                    id="oa-age"
+                    type="checkbox"
+                    checked={ageConfirmed}
+                    onChange={(e) => setAgeConfirmed(e.target.checked)}
+                    className="mt-0.5"
+                  />
                   <span>I confirm the applicant is 18 years of age or over.</span>
                 </label>
               </Field>
 
               <Field wide error={errors["f-terms"]}>
                 <label className="flex items-start gap-2 text-[12px] text-ink cursor-pointer">
-                  <input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} className="mt-0.5" />
+                  <input
+                    id="oa-terms"
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    className="mt-0.5"
+                  />
                   <span>
                     I accept the{" "}
                     <button type="button" onClick={() => setShowTerms(true)} className="text-navy-lt font-semibold underline underline-offset-2">
@@ -312,11 +357,21 @@ export function OpenAccountPage() {
                 </label>
               </Field>
 
+              {submitError ? (
+                <div className="col-span-full">
+                  <Callout title="Submission failed" variant="warn">
+                    <p>{submitError}</p>
+                  </Callout>
+                </div>
+              ) : null}
+
               <FormActions>
-                <Btn variant="primary" onClick={submit}>
-                  Submit Application
+                <Btn variant="primary" onClick={submit} disabled={submitting}>
+                  {submitting ? "Submitting…" : "Submit Application"}
                 </Btn>
-                <Btn onClick={fillSample}>Fill sample values</Btn>
+                <Btn onClick={fillSample} disabled={submitting}>
+                  Fill sample values
+                </Btn>
               </FormActions>
             </FormGrid>
           </div>
@@ -339,8 +394,7 @@ export function OpenAccountPage() {
             Referral code {submitted.referral} ({submitted.referrer}). Terms and conditions accepted at {submitted.termsAcceptedAt}.
           </p>
           <p className="text-[12.5px] font-semibold text-neg mb-3">
-            No account has been opened, no funds have been collected and no identity documents were requested or stored. This record exists
-            only in this browser tab and is discarded on reload.
+            No account has been opened, no funds have been collected and no identity documents were requested or stored.
           </p>
           <p className="text-[12.5px] text-ink mb-3">
             Next step: complete eKYC verification. Identity documents are reviewed before the application is approved.

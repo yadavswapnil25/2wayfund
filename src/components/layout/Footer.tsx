@@ -35,8 +35,9 @@ export function Footer() {
           system-design case study; not for use in any real transaction.
         </p>
         <p className="m-0">
-          This page runs entirely in your browser. It makes no network requests, uses no cookies or storage, and transmits nothing anywhere.
-          Authentication is mocked with credentials printed on the login screens — never enter a real password into a prototype.
+          Most pages here run entirely in your browser and make no network requests. Opening an account submits your application to a
+          demonstration backend for this case study — no real account is opened, no funds are collected and no identity documents are
+          requested. Authentication is mocked with credentials printed on the login screens — never enter a real password into a prototype.
         </p>
       </div>
     </footer>

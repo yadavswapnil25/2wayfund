@@ -7,6 +7,7 @@ import { landingFor } from "./lib/access";
 import { LoginPage } from "./pages/auth/LoginPage";
 import { AdminLoginPage } from "./pages/auth/AdminLoginPage";
 import { DeniedPage } from "./pages/auth/DeniedPage";
+import { SetPasswordPage } from "./pages/auth/SetPasswordPage";
 
 import { AccountSummaryPage } from "./pages/customer/AccountSummaryPage";
 import { TransferFundsPage } from "./pages/customer/TransferFundsPage";
@@ -55,6 +56,7 @@ function AppRoutes() {
       <Route element={<AppShell />}>
         <Route path="/login" element={<RouteGuard><LoginPage /></RouteGuard>} />
         <Route path="/admin-login" element={<RouteGuard><AdminLoginPage /></RouteGuard>} />
+        <Route path="/set-password" element={<RouteGuard><SetPasswordPage /></RouteGuard>} />
         <Route path="/denied" element={<RouteGuard><DeniedPage /></RouteGuard>} />
 
         <Route path="/" element={<RouteGuard><AccountSummaryPage /></RouteGuard>} />
