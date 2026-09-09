@@ -1,5 +1,5 @@
-import type { ComponentType } from "react";
 import { Link } from "react-router-dom";
+import type { LucideIcon } from "lucide-react";
 import { ArrowLeftRight, Banknote, Bell, Globe2, LifeBuoy } from "lucide-react";
 import { PageHead } from "../../components/ui/Flow";
 import { Panel, PanelBody, PanelHead } from "../../components/ui/Panel";
@@ -24,7 +24,7 @@ import {
   PROHIBITED_USES,
 } from "../../data/accountServiceContent";
 
-const SERVICE_ICONS: ComponentType<{ size?: number; className?: string }>[] = [Banknote, ArrowLeftRight, Globe2, Bell, LifeBuoy];
+const SERVICE_ICONS: LucideIcon[] = [Banknote, ArrowLeftRight, Globe2, Bell, LifeBuoy];
 
 export function AccountServicesPage() {
   return (

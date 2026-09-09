@@ -28,7 +28,7 @@ const CIF_FIELDS: CifField[] = [
 ];
 
 function maintTagVariant(status: MaintenanceEntry["status"]): string {
-  if (status === "Applied") return "approved";
+  if (status === "Posted") return "approved";
   if (status === "Rejected") return "rejected";
   return "review";
 }
@@ -158,7 +158,7 @@ export function CustomerDataPage() {
         ...s,
         user: applyFieldValue(f, m.after, s.user),
         messages: [notice, ...s.messages],
-        maintenance: s.maintenance.map((x) => (x.ref === m.ref ? { ...x, status: "Applied" as const, checker: session.display, decidedAt: stamp() } : x)),
+        maintenance: s.maintenance.map((x) => (x.ref === m.ref ? { ...x, status: "Posted" as const, checker: session.display, decidedAt: stamp() } : x)),
       };
     });
   }
@@ -384,7 +384,7 @@ export function CustomerDataPage() {
                   <p className="m-0">
                     Raised: {m.maker} · {m.raisedAt}
                   </p>
-                  <p className="m-0">{m.checker ? `${m.status === "Applied" ? "Authorised" : "Rejected"}: ${m.checker} · ${m.decidedAt}` : "Awaiting authorisation"}</p>
+                  <p className="m-0">{m.checker ? `${m.status === "Posted" ? "Authorised" : "Rejected"}: ${m.checker} · ${m.decidedAt}` : "Awaiting authorisation"}</p>
                 </div>
               </div>
             ))}

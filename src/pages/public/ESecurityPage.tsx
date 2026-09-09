@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import type { ComponentType } from "react";
+import type { LucideIcon } from "lucide-react";
 import { CreditCard, Eye, KeyRound, PhoneCall, ShieldAlert, Smartphone } from "lucide-react";
 import { PageHead, Flow } from "../../components/ui/Flow";
 import { Panel, PanelBody, PanelHead } from "../../components/ui/Panel";
@@ -14,7 +14,7 @@ const IF_SOMETHING_LOOKS_WRONG = [
 ];
 
 interface Tip {
-  icon: ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   title: string;
   body: string;
 }

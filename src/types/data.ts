@@ -256,6 +256,10 @@ export interface ApplicationAudit {
 
 export interface Application {
   ref: string;
+  /** Links this record to the customer it belongs to, once they have an
+   * active account — set only once an application is provisioned. A
+   * prospect still under review has no account yet, so no customerId. */
+  customerId?: string;
   name: string;
   fatherName?: string;
   email: string;

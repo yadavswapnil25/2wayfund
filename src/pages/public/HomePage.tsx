@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ArrowLeftRight, CreditCard, DollarSign, FileCheck2, Globe2, ShieldCheck } from "lucide-react";
 import { Chain } from "../../components/ui/Flow";
@@ -12,7 +12,7 @@ const PAYMENT_CORRIDOR = ["Country A", "International payment", "Currency conver
 const INDICATIVE_CODES: CurrencyCode[] = ["EUR", "INR", "GBP"];
 
 interface Feature {
-  icon: ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   title: string;
   body: string;
 }

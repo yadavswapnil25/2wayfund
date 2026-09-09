@@ -1,5 +1,6 @@
-import type { ComponentType, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import type { LucideIcon } from "lucide-react";
 import { Check, Compass, Gauge, Lightbulb, Scale, ShieldCheck, Smile, Sparkles } from "lucide-react";
 import { PageHead, Chain, Flow } from "../../components/ui/Flow";
 import { Panel, PanelBody, PanelHead } from "../../components/ui/Panel";
@@ -45,7 +46,7 @@ import {
   VISION_VALUES,
 } from "../../data/companyContent";
 
-const PILLAR_ICONS: Record<string, ComponentType<{ size?: number; className?: string }>> = {
+const PILLAR_ICONS: Record<string, LucideIcon> = {
   Speed: Gauge,
   Security: ShieldCheck,
   Transparency: Compass,

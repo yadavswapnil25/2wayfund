@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ClipboardCheck, ShieldCheck } from "lucide-react";
 import { PageHead } from "../../components/ui/Flow";
 import { Tag } from "../../components/ui/Tag";
@@ -6,6 +6,7 @@ import { useApp } from "../../state/AppContext";
 import type { Application, Kyc, KycDocument } from "../../types/data";
 import { stamp } from "../../lib/dates";
 import { formatCode } from "../../lib/format";
+import { seedKycForApplications } from "../../lib/kyc";
 
 const APP_STATUSES: Application["status"][] = ["Submitted", "Under review", "Approved", "Rejected"];
 
@@ -40,6 +41,16 @@ export function ComplianceConsolePage() {
   const { store, setStore, session } = useApp();
   const [openRef, setOpenRef] = useState<string | null>(null);
 
+  // Gives the prospect queue a spread of KYC states on first visit, so
+  // there is something to adjudicate beyond the customer's own record.
+  useEffect(() => {
+    setStore((s) => {
+      const applications = seedKycForApplications(s.applications);
+      return applications === s.applications ? s : { ...s, applications };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function updateApp(ref: string, fn: (a: Application) => Application) {
     setStore((s) => ({ ...s, applications: s.applications.map((a) => (a.ref === ref ? fn(a) : a)) }));
   }
@@ -47,9 +58,7 @@ export function ComplianceConsolePage() {
   function decideDoc(appRef: string, docId: string, status: "Verified" | "Rejected") {
     updateApp(appRef, (a) => {
       if (!a.kyc) return a;
-      const documents = a.kyc.documents.map((d) =>
-        d.id === docId ? { ...d, status, note: status === "Rejected" ? "Did not pass verification — re-submission required" : null } : d
-      );
+      const documents = a.kyc.documents.map((d) => (d.id === docId ? { ...d, status } : d));
       return settleKyc(a, { ...a.kyc, documents }, session.display);
     });
   }
@@ -179,6 +188,9 @@ export function ComplianceConsolePage() {
                                   <p className="m-0 mt-0.5 text-[11px] text-ink-2">
                                     {d.filename ? `${d.filename} · ${d.size} · captured ${d.received}` : "Not provided"}
                                   </p>
+                                  {d.status === "Rejected" ? (
+                                    <p className="m-0 mt-0.5 text-[11px] font-semibold text-neg">Did not pass verification — re-submission required</p>
+                                  ) : null}
                                 </div>
                                 {d.status === "Received" ? (
                                   <div className="flex gap-2 flex-none">

@@ -1,5 +1,5 @@
-import type { ComponentType } from "react";
 import { Link } from "react-router-dom";
+import type { LucideIcon } from "lucide-react";
 import {
   ArrowLeftRight,
   Ban,
@@ -60,7 +60,7 @@ import {
   SECURITY_PROTECT_LIST,
 } from "../../data/cardServiceContent";
 
-const PILLAR_ICONS: Record<string, ComponentType<{ size?: number; className?: string }>> = {
+const PILLAR_ICONS: Record<string, LucideIcon> = {
   Debit: Wallet,
   Credit: Gem,
   Recharge: RefreshCw,

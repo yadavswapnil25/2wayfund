@@ -17,7 +17,7 @@ import { Stepper } from "../../components/ui/Stepper";
 import { Tag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
 import type { Application, KycDocument } from "../../types/data";
-import { KYC_DOCS, KYC_STAGES, VIDEO_KYC_SLOTS, humanSize, kycStageIndex, seedKycForApplications, stampCapture } from "../../lib/kyc";
+import { KYC_DOCS, KYC_STAGES, VIDEO_KYC_SLOTS, humanSize, kycStageIndex, stampCapture } from "../../lib/kyc";
 import { stamp } from "../../lib/dates";
 
 const DOC_ICONS: Record<string, typeof Camera> = { photo: Camera, signature: PenLine, aadhaar: IdCard, pan: IdCard };
@@ -34,7 +34,6 @@ function docTagVariant(status: KycDocument["status"]): string {
 
 export function EkycPage() {
   const { store, setStore } = useApp();
-  const [selectedRef, setSelectedRef] = useState("");
   const [previews, setPreviews] = useState<Record<string, { url: string; mime: string }>>({});
   const [cameraDocId, setCameraDocId] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -49,24 +48,6 @@ export function EkycPage() {
   const drawingRef = useRef(false);
   const lastPointRef = useRef({ x: 0, y: 0 });
 
-  // Seed a spread of KYC states across the queue on first visit, once.
-  useEffect(() => {
-    setStore((s) => {
-      const applications = seedKycForApplications(s.applications);
-      return applications === s.applications ? s : { ...s, applications };
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (selectedRef || store.applications.length === 0) return;
-    const actionable =
-      store.applications.find((a) => a.kyc?.status === "Not started") ??
-      store.applications.find((a) => a.kyc?.status === "Rejected") ??
-      store.applications[0];
-    setSelectedRef(actionable.ref);
-  }, [selectedRef, store.applications]);
-
   function stopCamera() {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
@@ -75,7 +56,10 @@ export function EkycPage() {
 
   useEffect(() => stopCamera, []);
 
-  const app = useMemo(() => store.applications.find((a) => a.ref === selectedRef) ?? null, [store.applications, selectedRef]);
+  const app = useMemo(
+    () => store.applications.find((a) => a.customerId === store.user.id) ?? null,
+    [store.applications, store.user.id]
+  );
   const kyc = app?.kyc ?? null;
   const locked = kyc ? kyc.status === "Verified" || kyc.status === "Under verification" : false;
   const allProvided = kyc ? kyc.documents.every((d) => d.status !== "Not provided") : false;
@@ -283,46 +267,27 @@ export function EkycPage() {
     <>
       <PageHead
         title="eKYC Verification"
-        lede="Identity verification for submitted applications. Collects nothing real — please use dummy images rather than genuine documents, and a scribble rather than a real signature."
+        lede="Identity verification for your account. Collects nothing real — please use dummy images rather than genuine documents, and a scribble rather than a real signature."
       />
 
-      {/* Select application */}
+      {/* Your application */}
       <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden mb-5">
         <div className="flex items-center gap-3 px-4.5 sm:px-5 py-4 border-b border-border-lt">
           <span className="flex-none w-10 h-10 rounded-xl bg-[#EAF1F9] text-navy flex items-center justify-center">
             <ClipboardList size={17} />
           </span>
           <div>
-            <h3 className="m-0 text-[14.5px] font-bold text-navy">Select Application</h3>
-            <p className="m-0 mt-0.5 text-[11px] text-ink-2">{app ? app.ref : "No application selected"}</p>
+            <h3 className="m-0 text-[14.5px] font-bold text-navy">Your Application</h3>
+            <p className="m-0 mt-0.5 text-[11px] text-ink-2">
+              {app ? `${app.ref} · submitted ${app.submitted}` : "No application on file"}
+            </p>
           </div>
         </div>
 
-        {store.applications.length === 0 ? (
-          <p className="text-center py-10 text-ink-2 text-[12.5px]">
-            Submit an application first — it will appear here for verification.
-          </p>
+        {!app ? (
+          <p className="text-center py-10 text-ink-2 text-[12.5px]">No identity verification record found for this account.</p>
         ) : (
-          <>
-            <div className="px-4.5 sm:px-5 py-4">
-              <select
-                value={selectedRef}
-                onChange={(e) => {
-                  closeCamera();
-                  setSignatureDocId(null);
-                  setSelectedRef(e.target.value);
-                }}
-                className="w-full text-[13px] px-2.5 py-2 border border-border bg-white rounded-lg focus:outline-none focus:border-navy-lt focus:ring-2 focus:ring-navy-lt/20"
-              >
-                {store.applications.map((a) => (
-                  <option key={a.ref} value={a.ref}>
-                    {a.ref} — {a.name} ({a.kyc?.status ?? "Not started"})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Stepper current={stageIdx} steps={KYC_STAGES} />
-          </>
+          <Stepper current={stageIdx} steps={KYC_STAGES} />
         )}
       </div>
 

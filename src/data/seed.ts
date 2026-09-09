@@ -282,6 +282,36 @@ export function createSeedStore(): Store {
     purposes: ["Personal remittance", "Business receipts", "Payroll disbursement", "Treasury & liquidity", "Supplier settlement"],
 
     applications: [
+      // The signed-in customer's own account-opening record. Already
+      // approved and KYC-verified, matching the Verified badge and active
+      // account shown elsewhere — this is what the eKYC page shows a
+      // customer, scoped by customerId rather than the open prospect queue
+      // below (which belongs to the Compliance Console, not to any customer).
+      {
+        ref: "2WF-APP-10199", customerId: "u_0001", name: "Aditi Sharma", email: "a.sharma@example.invalid", country: "India",
+        tier: "Master Account", purpose: "Personal remittance", referral: "2WF-STAFF7",
+        referrer: "Internal staff referral", termsAcceptedAt: "18 Dec 2025 11:02",
+        submitted: "18 Dec 2025", status: "Approved",
+        kyc: {
+          status: "Verified",
+          videoSlot: "20 Dec 2025 11:30",
+          documents: [
+            { id: "photo", name: "Photograph", icon: "photo", note: "Recent passport-style photograph of the applicant.", status: "Verified", filename: "photo_2WF-APP-10199.jpg", size: "398 KB", received: "18 Dec 2025 11:05 (seeded)" },
+            { id: "signature", name: "Specimen signature", icon: "signature", note: "Signature as it will appear on instructions. Draw it here or upload a scan on plain white paper.", status: "Verified", filename: "signature_2WF-APP-10199.png", size: "41 KB", received: "18 Dec 2025 11:06 (seeded)" },
+            { id: "aadhaar", name: "Aadhaar card", icon: "aadhaar", note: "Proof of identity and address. A production system captures this through a UIDAI-authorised channel and stores only a masked reference, never the full number.", status: "Verified", filename: "aadhaar_2WF-APP-10199.pdf", size: "251 KB", received: "18 Dec 2025 11:07 (seeded)" },
+            { id: "pan", name: "PAN card", icon: "pan", note: "Tax identification, required for accounts above the reporting threshold.", status: "Verified", filename: "pan_2WF-APP-10199.pdf", size: "183 KB", received: "18 Dec 2025 11:08 (seeded)" },
+          ],
+        },
+        audit: [
+          { at: "18 Dec 2025 11:02", actor: "Applicant", action: "Application submitted" },
+          { at: "18 Dec 2025 11:08", actor: "Applicant", action: "eKYC documents submitted for verification" },
+          { at: "19 Dec 2025 09:30", actor: "Compliance officer", action: "Moved to review" },
+          { at: "19 Dec 2025 14:15", actor: "Compliance officer", action: "eKYC verified" },
+          { at: "22 Dec 2025 10:00", actor: "Compliance officer", action: "Approved — account provisioning queued" },
+        ],
+      },
+      // Prospects still in the onboarding queue — none has an account yet,
+      // so none carries a customerId. Visible to the Compliance Console only.
       {
         ref: "2WF-APP-10229", name: "Nadia Rahman", email: "n.rahman@example.invalid", country: "United Arab Emirates",
         tier: "Corporate Account", purpose: "Treasury & liquidity", referral: "2WF-PART22",

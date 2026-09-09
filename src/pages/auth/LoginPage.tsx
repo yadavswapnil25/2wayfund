@@ -4,7 +4,7 @@ import { Eye, EyeOff, Lock, ShieldCheck, User } from "lucide-react";
 import { Panel, PanelBody } from "../../components/ui/Panel";
 import { Field, TextInput } from "../../components/ui/Field";
 import { Btn } from "../../components/ui/Button";
-import { Callout, Note } from "../../components/ui/Misc";
+import { Note } from "../../components/ui/Misc";
 import { CREDENTIALS, useApp } from "../../state/AppContext";
 
 export function LoginPage() {

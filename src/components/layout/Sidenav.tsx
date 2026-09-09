@@ -17,7 +17,14 @@ export function Sidenav({ open }: { open: boolean }) {
         // Services are public marketing/policy pages, not back-office tools —
         // staff have no reason to see them in the operations rail.
         if (group === "Services" && session.role === "admin") return null;
-        const items = ROUTES.filter((r) => r.tab && r.group === group && canAccess(r, session.role));
+        let items = ROUTES.filter((r) => r.tab && r.group === group && canAccess(r, session.role));
+        // Within Services specifically, a signed-in customer's rail is
+        // pared down to eKYC only — the marketing/policy pages there are
+        // reached from the public site, not the banking dashboard. Accounts,
+        // Transfers and Cards are untouched — those are the actual dashboard.
+        if (group === "Services" && session.role === "customer") {
+          items = items.filter((r) => r.path === "/ekyc");
+        }
         if (items.length === 0) return null;
         return (
           <div key={group} className="border-b border-border-lt last:border-b-0">
