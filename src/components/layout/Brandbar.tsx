@@ -13,14 +13,16 @@ export function Brandbar({ onToggleNav }: { onToggleNav: () => void }) {
   return (
     <header className="bg-white border-b-[3px] border-navy px-5.5">
       <div className="max-w-[1360px] mx-auto flex items-center justify-between gap-6 flex-wrap min-h-[74px] py-2.5">
-        <button
-          type="button"
-          onClick={onToggleNav}
-          aria-label="Menu"
-          className="hidden max-[1000px]:inline-flex items-center justify-center bg-white border border-border text-ink text-base px-2 py-1 rounded"
-        >
-          <Menu size={16} />
-        </button>
+        {signedIn ? (
+          <button
+            type="button"
+            onClick={onToggleNav}
+            aria-label="Menu"
+            className="hidden max-[1000px]:inline-flex items-center justify-center bg-white border border-border text-ink text-base px-2 py-1 rounded"
+          >
+            <Menu size={16} />
+          </button>
+        ) : null}
 
         <div className="flex items-center gap-3">
           {!logoError ? (

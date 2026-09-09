@@ -14,6 +14,9 @@ export function Sidenav({ open }: { open: boolean }) {
       aria-label="Primary"
     >
       {NAV_GROUPS.map((group) => {
+        // Services are public marketing/policy pages, not back-office tools —
+        // staff have no reason to see them in the operations rail.
+        if (group === "Services" && session.role === "admin") return null;
         const items = ROUTES.filter((r) => r.tab && r.group === group && canAccess(r, session.role));
         if (items.length === 0) return null;
         return (

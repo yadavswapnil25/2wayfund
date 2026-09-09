@@ -32,35 +32,61 @@ export const ROUTES: RouteDef[] = [
   { path: "/home", tab: null, crumb: "Home", access: "public" },
   { path: "/clients", tab: null, crumb: "Clients & Sectors", access: "public" },
   { path: "/more", tab: null, crumb: "More", access: "public" },
-  // { path: "/e-security", tab: "e-Security", crumb: "Services › e-Security", group: "Services", access: "public" },
-  // { path: "/accounts", tab: "Account Types", crumb: "Accounts › Account Types", group: "Services", access: "public" },
-  // { path: "/account-services", tab: "Account Services", crumb: "Services › Account Services", group: "Services", access: "public" },
-  // { path: "/card-services", tab: "Card Services", crumb: "Services › Card Services", group: "Services", access: "public" },
-  // { path: "/exchange-services", tab: "Exchange Services", crumb: "Services › Exchange Services", group: "Services", access: "public" },
-  // { path: "/fee-policy", tab: "Fee Policy", crumb: "Services › Fee Policy", group: "Services", access: "public" },
-  // { path: "/transaction-security", tab: "Transaction Security", crumb: "Services › Transaction Security", group: "Services", access: "public" },
-  // { path: "/privacy-policy", tab: "Privacy Policy", crumb: "Services › Privacy Policy", group: "Services", access: "public" },
-  // { path: "/open-account", tab: "Open an Account", crumb: "Services › Open an Account", group: "Services", access: "anon" },
+  { path: "/e-security", tab: "e-Security", crumb: "Services › e-Security", group: "Services", access: "public" },
+  { path: "/accounts", tab: "Account Types", crumb: "Accounts › Account Types", group: "Services", access: "public" },
+  { path: "/account-services", tab: "Account Services", crumb: "Services › Account Services", group: "Services", access: "public" },
+  { path: "/card-services", tab: "Card Services", crumb: "Services › Card Services", group: "Services", access: "public" },
+  { path: "/exchange-services", tab: "Exchange Services", crumb: "Services › Exchange Services", group: "Services", access: "public" },
+  { path: "/fee-policy", tab: "Fee Policy", crumb: "Services › Fee Policy", group: "Services", access: "public" },
+  { path: "/transaction-security", tab: "Transaction Security", crumb: "Services › Transaction Security", group: "Services", access: "public" },
+  { path: "/privacy-policy", tab: "Privacy Policy", crumb: "Services › Privacy Policy", group: "Services", access: "public" },
+  { path: "/open-account", tab: "Open an Account", crumb: "Services › Open an Account", group: "Services", access: "anon" },
   { path: "/ekyc", tab: "eKYC", crumb: "Services › eKYC Verification", group: "Services", access: "public" },
-  // { path: "/fees", tab: "Charges", crumb: "Services › Fees & Charges", group: "Services", access: "public" },
-  // { path: "/security", tab: "Security", crumb: "Security › Security & KYC", group: "Services", access: "public" },
-  // { path: "/company", tab: "About", crumb: "About › Company Profile", group: "Services", access: "public" },
+  { path: "/fees", tab: "Charges", crumb: "Services › Fees & Charges", group: "Services", access: "public" },
+  { path: "/security", tab: "Security", crumb: "Security › Security & KYC", group: "Services", access: "public" },
+  { path: "/company", tab: "About", crumb: "About › Company Profile", group: "Services", access: "public" },
 ];
 
 export const NAV_GROUPS = ["Accounts", "Transfers", "Cards", "Services", "Administration"];
 
-export const PUBLIC_NAV: { label: string; path: string }[] = [
+export interface PublicNavItem {
+  label: string;
+  path: string;
+}
+
+export interface PublicNavGroup {
+  label: string;
+  items: PublicNavItem[];
+}
+
+/** Top-level links shown directly in the public navbar. */
+export const PUBLIC_NAV_PRIMARY: PublicNavItem[] = [
   { label: "Home", path: "/home" },
   { label: "About Us", path: "/company" },
   { label: "Clients", path: "/clients" },
-  { label: "Account Services", path: "/account-services" },
-  { label: "Card Services", path: "/card-services" },
-  { label: "Exchange Services", path: "/exchange-services" },
-  { label: "Fee Policy", path: "/fee-policy" },
-  { label: "About KYC", path: "/security" },
-  { label: "Transaction Security", path: "/transaction-security" },
-  { label: "Privacy Policy", path: "/privacy-policy" },
-  { label: "e-Security", path: "/e-security" },
+];
+
+/** Remaining public pages, grouped under a dropdown so the navbar stays
+ * scannable as the site grows — eleven flat tabs stopped fitting on one row. */
+export const PUBLIC_NAV_GROUPS: PublicNavGroup[] = [
+  {
+    label: "Services",
+    items: [
+      { label: "Account Services", path: "/account-services" },
+      { label: "Card Services", path: "/card-services" },
+      { label: "Exchange Services", path: "/exchange-services" },
+      { label: "Fee Policy", path: "/fee-policy" },
+    ],
+  },
+  {
+    label: "Security & Legal",
+    items: [
+      { label: "About KYC", path: "/security" },
+      { label: "Transaction Security", path: "/transaction-security" },
+      { label: "e-Security", path: "/e-security" },
+      { label: "Privacy Policy", path: "/privacy-policy" },
+    ],
+  },
 ];
 
 /** Two demo credentials for this account, printed on-screen exactly as a
