@@ -20,9 +20,6 @@ export const CORPORATE_DOCUMENTS = [
   "Nature and purpose of business",
 ];
 
-export const CORPORATE_FIGURE_NOTE =
-  "Note on the corporate figure. The corporate requirement is quoted in Indian Rupees while all individual tiers are quoted in US Dollars. Because the two are held in different currencies, the schedule is not ordered by a single comparable amount — the applicable exchange rate applies at the point of comparison rather than being baked into the stated figure.";
-
 export interface ProcessStep {
   title: string;
   desc: string;
@@ -78,7 +75,7 @@ export const PROHIBITED_CLOSING =
   "2 Way Fund International reserves the right to suspend or restrict an account where required or permitted by law or where serious compliance or security concerns arise.";
 
 export const FX_PARAGRAPHS = [
-  "The individual account-opening amounts are stated in USD, while the Corporate Account requirement is stated in Indian Rupees.",
+  "Every account-opening amount, corporate and individual alike, is stated in USD.",
   "Where a customer pays or deposits an equivalent amount in another currency, the applicable exchange rate and conversion conditions will determine the corresponding amount.",
   "Foreign exchange rates can change and therefore the equivalent local-currency amount may vary.",
 ];

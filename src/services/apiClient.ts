@@ -26,12 +26,16 @@ const API_URL = import.meta.env.VITE_API_URL;
 const CLIENT_KEY = import.meta.env.VITE_CLIENT_API_KEY;
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  // FormData bodies (file uploads) must NOT get a manual Content-Type —
+  // the browser sets the multipart boundary itself when it's left unset.
+  const isFormData = init?.body instanceof FormData;
+
   let response: Response;
   try {
     response = await fetch(`${API_URL}${path}`, {
       ...init,
       headers: {
-        "Content-Type": "application/json",
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
         Accept: "application/json",
         "X-Client-Key": CLIENT_KEY,
         ...init?.headers,

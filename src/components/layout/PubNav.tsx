@@ -99,7 +99,7 @@ export function PubNav() {
             to="/open-account"
             className="inline-block px-4 py-2 rounded-[5px] text-[12.5px] font-bold no-underline bg-gradient-to-b from-[#D9AF57] to-gold text-navy-dk border border-gold-dk"
           >
-            Open an Account
+            Apply for an Account
           </Link>
         </div>
       </div>

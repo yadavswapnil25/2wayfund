@@ -31,14 +31,19 @@ test("an approved applicant can set their password and log in with it", async ({
   const submitResponse = await request.post(`${API_BASE}/applications`, {
     headers: { "X-Client-Key": CLIENT_KEY },
     data: {
-      name: "Activation Test",
-      father_name: "Test Parent",
-      email,
       country: "India",
       tier: "Master Account",
       purpose: "Personal savings",
+      name: "Activation Test",
+      father_name: "Test Parent",
+      dob: "1991-04-17",
+      address_communication: "14 Sample Street, Andheri East, Mumbai 400069, India",
+      address_permanent: "14 Sample Street, Andheri East, Mumbai 400069, India",
+      mobile_personal: "+91 90000 00000",
+      email,
+      organisation: "Sample Trading Company Pvt Ltd",
+      cross_border_detail: "Applicant invoices customers abroad and needs a settlement account in that corridor.",
       referral: "2WF-DEMO01",
-      age_confirmed: true,
       terms_accepted: true,
     },
   });

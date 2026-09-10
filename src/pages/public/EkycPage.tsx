@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
+  AlertTriangle,
   Camera,
   Check,
   ClipboardList,
   FileText,
   IdCard,
+  Loader2,
   PenLine,
   ShieldCheck,
   Trash2,
@@ -17,8 +20,10 @@ import { Stepper } from "../../components/ui/Stepper";
 import { Tag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
 import type { Application, KycDocument } from "../../types/data";
-import { KYC_DOCS, KYC_STAGES, VIDEO_KYC_SLOTS, humanSize, kycStageIndex, stampCapture } from "../../lib/kyc";
+import { KYC_DOCS, KYC_STAGES, VIDEO_KYC_SLOTS, freshKyc, humanSize, kycStageIndex, stampCapture } from "../../lib/kyc";
 import { stamp } from "../../lib/dates";
+import { ApiError } from "../../services/apiClient";
+import { getApplication, uploadApplicationPhoto } from "../../services/applicationService";
 
 const DOC_ICONS: Record<string, typeof Camera> = { photo: Camera, signature: PenLine, aadhaar: IdCard, pan: IdCard };
 
@@ -34,6 +39,12 @@ function docTagVariant(status: KycDocument["status"]): string {
 
 export function EkycPage() {
   const { store, setStore } = useApp();
+  const [searchParams] = useSearchParams();
+  // A ref in the URL means we arrived from a real Apply for an Account
+  // submission — that application lives in the real backend, so its photo
+  // upload should too. Without one (e.g. reached via nav), we're looking
+  // at the seeded demo data, which the real backend has never heard of.
+  const refParam = searchParams.get("ref");
   const [previews, setPreviews] = useState<Record<string, { url: string; mime: string }>>({});
   const [cameraDocId, setCameraDocId] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -41,6 +52,10 @@ export function EkycPage() {
   const [signatureDocId, setSignatureDocId] = useState<string | null>(null);
   const [hasInk, setHasInk] = useState(false);
   const [slot, setSlot] = useState(VIDEO_KYC_SLOTS[0]);
+  const [uploading, setUploading] = useState<Record<string, boolean>>({});
+  const [uploadErrors, setUploadErrors] = useState<Record<string, string | null>>({});
+  const [fetchingApplication, setFetchingApplication] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -57,9 +72,36 @@ export function EkycPage() {
   useEffect(() => stopCamera, []);
 
   const app = useMemo(
-    () => store.applications.find((a) => a.customerId === store.user.id) ?? null,
-    [store.applications, store.user.id]
+    () => store.applications.find((a) => (refParam ? a.ref === refParam : a.customerId === store.user.id)) ?? null,
+    [store.applications, store.user.id, refParam]
   );
+
+  // The application only lives in this browser tab's memory once someone
+  // has clicked through from Apply for an Account in the same session — a
+  // reload, a bookmarked link, or (as here) navigating straight to this
+  // URL loses it, even though it's real and still on the backend.
+  useEffect(() => {
+    if (!refParam || app) return;
+    let cancelled = false;
+    setFetchingApplication(true);
+    setFetchError(null);
+    getApplication(refParam)
+      .then((application) => {
+        if (cancelled) return;
+        setStore((s) => ({ ...s, applications: [{ ...application, kyc: freshKyc() }, ...s.applications] }));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setFetchError(err instanceof ApiError ? err.message : "Could not load this application.");
+      })
+      .finally(() => {
+        if (!cancelled) setFetchingApplication(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refParam, app, setStore]);
+
   const kyc = app?.kyc ?? null;
   const locked = kyc ? kyc.status === "Verified" || kyc.status === "Under verification" : false;
   const allProvided = kyc ? kyc.documents.every((d) => d.status !== "Not provided") : false;
@@ -68,7 +110,7 @@ export function EkycPage() {
     setStore((s) => ({ ...s, applications: s.applications.map((a) => (a.ref === ref ? fn(a) : a)) }));
   }
 
-  function attachCapture(docId: string, blob: Blob, filename: string, mime: string) {
+  async function attachCapture(docId: string, blob: Blob, filename: string, mime: string) {
     if (!app || !app.kyc) return;
     const key = `${app.ref}:${docId}`;
     setPreviews((p) => {
@@ -90,6 +132,21 @@ export function EkycPage() {
         },
       };
     });
+
+    // Only the photo is wired to real persistence so far, and only for a
+    // real (backend-known) application — everything else stays the local
+    // browser-tab simulation described in the advisory panel below.
+    if (docId !== "photo" || !refParam) return;
+
+    setUploadErrors((e) => ({ ...e, [key]: null }));
+    setUploading((u) => ({ ...u, [key]: true }));
+    try {
+      await uploadApplicationPhoto(refParam, blob, filename);
+    } catch (err) {
+      setUploadErrors((e) => ({ ...e, [key]: err instanceof ApiError ? err.message : "Upload failed. Please try again." }));
+    } finally {
+      setUploading((u) => ({ ...u, [key]: false }));
+    }
   }
 
   function removeDoc(docId: string) {
@@ -285,7 +342,13 @@ export function EkycPage() {
         </div>
 
         {!app ? (
-          <p className="text-center py-10 text-ink-2 text-[12.5px]">No identity verification record found for this account.</p>
+          <p className="text-center py-10 text-ink-2 text-[12.5px]">
+            {fetchingApplication
+              ? "Loading your application…"
+              : fetchError
+                ? fetchError
+                : "No identity verification record found for this account."}
+          </p>
         ) : (
           <Stepper current={stageIdx} steps={KYC_STAGES} />
         )}
@@ -316,7 +379,7 @@ export function EkycPage() {
                 const preview = previews[`${app.ref}:${d.id}`];
                 const canEdit = !locked && d.status !== "Verified";
                 return (
-                  <div key={d.id} className="px-4.5 sm:px-5 py-4">
+                  <div key={d.id} data-testid={`doc-${d.id}`} className="px-4.5 sm:px-5 py-4">
                     <div className="flex items-start gap-3 flex-wrap">
                       <span className="flex-none w-9 h-9 rounded-full bg-tint text-ink-2 flex items-center justify-center">
                         <Icon size={16} />
@@ -334,6 +397,17 @@ export function EkycPage() {
                         ) : null}
                         {d.status === "Rejected" ? (
                           <p className="m-0 mt-1 text-[11px] text-neg font-semibold">Document illegible — re-submission required</p>
+                        ) : null}
+
+                        {d.id === "photo" && refParam && uploading[`${app.ref}:${d.id}`] ? (
+                          <p className="m-0 mt-1 flex items-center gap-1.5 text-[11px] text-ink-2">
+                            <Loader2 size={12} className="animate-spin" /> Uploading to your application…
+                          </p>
+                        ) : null}
+                        {d.id === "photo" && uploadErrors[`${app.ref}:${d.id}`] ? (
+                          <p className="m-0 mt-1 flex items-center gap-1.5 text-[11px] text-neg font-semibold">
+                            <AlertTriangle size={12} /> {uploadErrors[`${app.ref}:${d.id}`]}
+                          </p>
                         ) : null}
 
                         {preview ? (
@@ -573,9 +647,10 @@ export function EkycPage() {
           <h3 className="m-0 text-[13px] font-bold text-navy">Nothing collected is real</h3>
         </div>
         <p className="text-[12.5px] leading-relaxed m-0 text-ink">
-          Files captured here are held as local object URLs scoped to this browser tab and are never uploaded — there is no network
-          primitive anywhere in this file, so nothing selected or photographed can leave the browser. Video KYC is modelled as a booked
-          appointment rather than a live session; the actual session is conducted off-platform.
+          {refParam
+            ? "Your photograph is uploaded to this demonstration's backend and stored against your application for this case study — everything else here (signature, Aadhaar, PAN, and the video appointment) stays a local simulation, held only as an object URL in this browser tab."
+            : "Files captured here are held as local object URLs scoped to this browser tab and are never uploaded — nothing selected or photographed leaves the browser."}{" "}
+          Video KYC is modelled as a booked appointment rather than a live session; the actual session is conducted off-platform.
         </p>
       </div>
     </>

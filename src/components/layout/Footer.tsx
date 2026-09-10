@@ -15,7 +15,7 @@ const FOOT_LINKS: { label: string; path: string }[] = [
   { label: "e-Security", path: "/e-security" },
   { label: "Privacy Policy", path: "/privacy-policy" },
   { label: "Account Types", path: "/accounts" },
-  { label: "Open an Account", path: "/open-account" },
+  { label: "Apply for an Account", path: "/open-account" },
   { label: "eKYC", path: "/ekyc" },
 ];
 

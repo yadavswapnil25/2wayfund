@@ -58,7 +58,7 @@ export function HomePage() {
               to="/open-account"
               className="inline-block px-5.5 py-3 rounded-[5px] text-[13.5px] font-bold no-underline bg-gradient-to-b from-[#D9AF57] to-gold text-navy-dk border border-gold-dk hover:brightness-105"
             >
-              Open an Account
+              Apply for an Account
             </Link>
             <Link
               to="/login"
@@ -108,16 +108,16 @@ export function HomePage() {
 
       <div className="bg-navy-dk text-white rounded-[10px] p-6.5 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-white! text-lg mb-1">Ready to open an account?</h2>
+          <h2 className="text-white! text-lg mb-1">Ready to apply for an account?</h2>
           <p className="m-0 text-[12.5px] text-white/70 max-w-[60ch]">
-            Apply with a referral code, then complete eKYC verification. Demo only — no real account is opened.
+            Apply with a referral code, then complete eKYC verification.
           </p>
         </div>
         <Link
           to="/open-account"
           className="inline-block px-5.5 py-3 rounded-[5px] text-[13.5px] font-bold no-underline bg-gradient-to-b from-[#D9AF57] to-gold text-navy-dk border border-gold-dk hover:brightness-105 flex-shrink-0"
         >
-          Open an Account
+          Apply for an Account
         </Link>
       </div>
     </>

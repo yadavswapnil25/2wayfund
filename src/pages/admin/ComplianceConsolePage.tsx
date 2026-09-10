@@ -4,9 +4,10 @@ import { PageHead } from "../../components/ui/Flow";
 import { Tag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
 import type { Application, Kyc, KycDocument } from "../../types/data";
-import { stamp } from "../../lib/dates";
+import { ageOn, isoToDisplay, stamp, todayIso } from "../../lib/dates";
 import { formatCode } from "../../lib/format";
 import { seedKycForApplications } from "../../lib/kyc";
+import { OPENING_STEPS, stageForStatus } from "../../data/openAccountOptions";
 
 const APP_STATUSES: Application["status"][] = ["Submitted", "Under review", "Approved", "Rejected"];
 
@@ -135,6 +136,22 @@ export function ComplianceConsolePage() {
 
                   {isOpen ? (
                     <div className="px-4.5 sm:px-5 pb-5 bg-tint/40">
+                      <p className="m-0 mb-1 text-[11px] text-ink-2">
+                        Process stage: <strong className="text-navy">{stageForStatus(a.status)} — {OPENING_STEPS[stageForStatus(a.status) - 1]}</strong>
+                        {" "}of {OPENING_STEPS.length}
+                      </p>
+                      <p className="m-0 mb-3 text-[11px] text-ink-2 flex items-center gap-1.5 flex-wrap">
+                        Signature: <Tag variant={a.hasSignature ? "approved" : "review"}>{a.hasSignature ? "Uploaded" : "Missing"}</Tag>
+                        {a.tier.startsWith("Corporate Account") ? (
+                          <>
+                            Business certificate:{" "}
+                            <Tag variant={a.hasBusinessCertificate ? "approved" : "review"}>
+                              {a.hasBusinessCertificate ? "Uploaded" : "Missing"}
+                            </Tag>
+                          </>
+                        ) : null}
+                      </p>
+
                       <div className="grid gap-4 sm:grid-cols-2 mb-4">
                         <div>
                           <p className="m-0 mb-2 text-[10.5px] font-bold uppercase tracking-wide text-ink-2">Application</p>
@@ -170,6 +187,63 @@ export function ComplianceConsolePage() {
                           ) : null}
                         </div>
                       </div>
+
+                      {a.dob ? (
+                        <div className="grid gap-4 sm:grid-cols-3 mb-4">
+                          <div>
+                            <p className="m-0 mb-2 text-[10.5px] font-bold uppercase tracking-wide text-ink-2">Applicant &amp; contact</p>
+                            {[
+                              ["Date of birth", `${isoToDisplay(a.dob)}${a.dob ? ` (age ${ageOn(a.dob, todayIso())})` : ""}`],
+                              a.education ? ["Education", a.education] : null,
+                              a.mobilePersonal ? ["Personal mobile", a.mobilePersonal] : null,
+                              a.mobileOfficial ? ["Official mobile", a.mobileOfficial] : null,
+                              a.landline ? ["Landline", a.landline] : null,
+                            ]
+                              .filter((p): p is [string, string] => p !== null)
+                              .map(([k, v]) => (
+                                <p key={k} className="m-0 mb-1 text-[12px] text-ink">
+                                  <span className="text-ink-2">{k}: </span>
+                                  {v}
+                                </p>
+                              ))}
+                          </div>
+                          <div>
+                            <p className="m-0 mb-2 text-[10.5px] font-bold uppercase tracking-wide text-ink-2">Address</p>
+                            {[
+                              a.addressCommunication ? ["Communication", a.addressCommunication] : null,
+                              a.addressPermanent ? ["Permanent", a.addressPermanent] : null,
+                              a.addressOffice ? ["Office", a.addressOffice] : null,
+                            ]
+                              .filter((p): p is [string, string] => p !== null)
+                              .map(([k, v]) => (
+                                <p key={k} className="m-0 mb-1 text-[12px] text-ink">
+                                  <span className="text-ink-2">{k}: </span>
+                                  {v}
+                                </p>
+                              ))}
+                          </div>
+                          <div>
+                            <p className="m-0 mb-2 text-[10.5px] font-bold uppercase tracking-wide text-ink-2">Business &amp; financial</p>
+                            {[
+                              a.organisation ? ["Organisation", a.organisation] : null,
+                              a.occupation ? ["Occupation", a.occupation] : null,
+                              a.annualTurnover ? ["Annual turnover", a.annualTurnover] : null,
+                              a.annualIncome ? ["Annual income", a.annualIncome] : null,
+                              a.homeStatus ? ["Home status", a.homeStatus] : null,
+                              a.carStatus ? ["Car status", a.carStatus] : null,
+                              a.crossBorderReason ? ["Cross-border reason", a.crossBorderReason] : null,
+                              a.crossBorderDetail ? ["Cross-border detail", a.crossBorderDetail] : null,
+                            ]
+                              .filter((p): p is [string, string] => p !== null)
+                              .map(([k, v]) => (
+                                <p key={k} className="m-0 mb-1 text-[12px] text-ink">
+                                  <span className="text-ink-2">{k}: </span>
+                                  {v}
+                                </p>
+                              ))}
+                          </div>
+                        </div>
+                      ) : null}
 
                       {kyc ? (
                         <div className="bg-white border border-border-lt rounded-xl overflow-hidden mb-4">

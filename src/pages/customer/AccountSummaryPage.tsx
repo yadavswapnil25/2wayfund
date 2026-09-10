@@ -1,10 +1,33 @@
 import { Eye, EyeOff, Copy, Check, KeyRound, Send, UserPlus, FileText, ChevronRight, Printer, LogOut, ArrowUpRight, ArrowDownRight, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { PageHead } from "../../components/ui/Flow";
 import { StatusTag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
 import { displayMoney, formatCode, groupInFours, monogram, MASK } from "../../lib/format";
+
+interface CopyableDetailProps {
+  label: string;
+  value: string;
+  copied: boolean;
+  onCopy: () => void;
+}
+
+/** One account-identifier tile in the hero card: a label, the value, and
+ * a copy control. Shown in full — every value here belongs to the
+ * customer already looking at it. */
+function CopyableDetail({ label, value, copied, onCopy }: CopyableDetailProps) {
+  return (
+    <div className="rounded-lg border border-white/15 bg-white/8 px-3 py-2 backdrop-blur-sm">
+      <span className="block mb-0.5 text-[10px] uppercase text-white/55 font-semibold">{label}</span>
+      <p className="m-0 flex items-center gap-1.5 text-[13px]">
+        <span>{value}</span>
+        <button type="button" onClick={onCopy} className="text-white/60 hover:text-white" title={`Copy ${label}`}>
+          {copied ? <Check size={12} /> : <Copy size={12} />}
+        </button>
+      </p>
+    </div>
+  );
+}
 
 export function AccountSummaryPage() {
   const { store, balancesHidden, logout } = useApp();
@@ -54,20 +77,17 @@ export function AccountSummaryPage() {
 
   return (
     <>
-      <PageHead
-        title="Account & Passbook"
-        lede="Consolidated position across your multi-currency ledgers, with the most recent settlement activity. Figures are illustrative and do not represent any real holding."
-      />
+     
 
       {/* Hero balance card */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-navy-dk via-navy to-navy-lt text-white shadow-lg mb-5">
-        <div className="pointer-events-none absolute -top-24 -right-16 w-72 h-72 rounded-full bg-gold/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-28 -left-14 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0B3D42] via-[#0F5C63] to-[#17847F] text-white shadow-lg mb-4">
+        <div className="pointer-events-none absolute -top-20 -right-14 w-56 h-56 rounded-full bg-gold/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 -left-12 w-52 h-52 rounded-full bg-white/10 blur-3xl" />
 
-        <div className="relative px-5 sm:px-7 pt-6 pb-5">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3.5 min-w-0">
-              <span className="relative flex-none w-12 h-12 rounded-full border-2 border-white/40 overflow-hidden">
+        <div className="relative px-4 sm:px-5 pt-4 pb-3.5">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="relative flex-none w-9 h-9 rounded-full border-2 border-white/40 overflow-hidden">
                 {!avatarError ? (
                   <img
                     src="/user.jpg"
@@ -76,88 +96,95 @@ export function AccountSummaryPage() {
                     onError={() => setAvatarError(true)}
                   />
                 ) : (
-                  <span className="w-full h-full bg-gradient-to-br from-[#E8D6A8] to-gold text-navy-dk text-[16px] font-bold flex items-center justify-center">
+                  <span className="w-full h-full bg-gradient-to-br from-[#E8D6A8] to-gold text-navy-dk text-[13px] font-bold flex items-center justify-center">
                     {monogram(user.name)}
                   </span>
                 )}
-                <span className="absolute -right-0.5 -bottom-0.5 w-3 h-3 rounded-full bg-pos border-2 border-navy" />
+                <span className="absolute -right-0.5 -bottom-0.5 w-2.5 h-2.5 rounded-full bg-pos border-2 border-[#0B3D42]" />
               </span>
               <div className="min-w-0">
-                <p className="m-0 text-[12px] text-white/60">Welcome back</p>
-                <p className="m-0 text-[17px] font-bold truncate">{user.name}</p>
-                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide bg-white/15 text-white border border-white/20 px-2 py-0.5 rounded-full">
-                    <ShieldCheck size={11} /> KYC Verified
+                <p className="m-0 text-[11px] text-white/60">Welcome back</p>
+                <p className="m-0 text-[14.5px] font-bold truncate">{user.name}</p>
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                  <span className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase tracking-wide bg-white/15 text-white border border-white/20 px-1.75 py-0.5 rounded-full">
+                    <ShieldCheck size={10} /> KYC Verified
                   </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wide bg-white/10 text-white/80 border border-white/15 px-2 py-0.5 rounded-full">
+                  <span className="text-[9.5px] font-bold uppercase tracking-wide bg-white/10 text-white/80 border border-white/15 px-1.75 py-0.5 rounded-full">
                     {user.accountTier}
                   </span>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => navigate("/pin-security")}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-xs font-semibold text-white hover:bg-white/20 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-white/20 transition-colors"
               >
-                <KeyRound size={13} /> 9-Digit PIN
+                <KeyRound size={12} /> 9-Digit PIN
               </button>
               <button
                 type="button"
                 onClick={logout}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-xs font-semibold text-white hover:bg-white/20 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-white/20 transition-colors"
               >
-                <LogOut size={13} /> Log Out
+                <LogOut size={12} /> Log Out
               </button>
             </div>
           </div>
 
-          <div className="mt-6">
-            <span className="text-[11px] uppercase tracking-wide text-white/60 font-semibold">Available operative balance</span>
-            <div className="flex items-end gap-3 flex-wrap mt-1.5">
-              <span className="font-num tabular-nums text-[32px] sm:text-[40px] font-extrabold leading-none">
+          <div className="mt-4">
+            <span className="text-[10.5px] uppercase tracking-wide text-white/60 font-semibold">Available operative balance</span>
+            <div className="flex items-end gap-2.5 flex-wrap mt-1">
+              <span className="font-num tabular-nums text-[24px] sm:text-[28px] font-extrabold leading-none">
                 {displayMoney(inrLedger.amount, "INR", balancesHidden)}
               </span>
-              <span className="mb-1.5 inline-flex items-center gap-1 text-[10.5px] font-bold uppercase bg-white/10 border border-white/15 px-2.5 py-1 rounded-full text-white/80">
+              <span className="mb-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase bg-white/10 border border-white/15 px-2 py-0.5 rounded-full text-white/80">
                 Cleared funds
               </span>
             </div>
           </div>
 
-          <div className="grid gap-2.5 sm:grid-cols-3 mt-5">
-            <div className="rounded-xl border border-white/15 bg-white/8 px-3.5 py-2.5 backdrop-blur-sm">
-              <span className="block mb-1 text-[10.5px] uppercase text-white/55 font-semibold">Account number</span>
-              <p className="m-0 flex items-center gap-1.5 font-num">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 mt-3.5">
+            <div className="rounded-lg border border-white/15 bg-white/8 px-3 py-2 backdrop-blur-sm">
+              <span className="block mb-0.5 text-[10px] uppercase text-white/55 font-semibold">Account number</span>
+              <p className="m-0 flex items-center gap-1.5 font-num text-[13px]">
                 <span>{acctRevealed ? groupInFours(user.accountNumber) : `${MASK} ${MASK} ${last4}`}</span>
                 <button type="button" onClick={() => setAcctRevealed((v) => !v)} className="text-white/60 hover:text-white" title="Show / hide">
-                  {acctRevealed ? <EyeOff size={13} /> : <Eye size={13} />}
+                  {acctRevealed ? <EyeOff size={12} /> : <Eye size={12} />}
                 </button>
                 <button type="button" onClick={() => copy(user.accountNumber, "acct")} className="text-white/60 hover:text-white" title="Copy">
-                  {copiedField === "acct" ? <Check size={13} /> : <Copy size={13} />}
+                  {copiedField === "acct" ? <Check size={12} /> : <Copy size={12} />}
                 </button>
               </p>
             </div>
-            <div className="rounded-xl border border-white/15 bg-white/8 px-3.5 py-2.5 backdrop-blur-sm">
-              <span className="block mb-1 text-[10.5px] uppercase text-white/55 font-semibold">Customer ID (CIF)</span>
-              <p className="m-0 flex items-center gap-1.5">
-                <span>{user.reference}</span>
-                <button type="button" onClick={() => copy(user.reference, "cif")} className="text-white/60 hover:text-white" title="Copy">
-                  {copiedField === "cif" ? <Check size={13} /> : <Copy size={13} />}
-                </button>
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/15 bg-white/8 px-3.5 py-2.5 backdrop-blur-sm">
-              <span className="block mb-1 text-[10.5px] uppercase text-white/55 font-semibold">Branch &amp; IFSC code</span>
-              <p className="m-0">{user.ifsc}</p>
-              <span className="text-[11px] text-white/55">{user.branch}</span>
-            </div>
+            <CopyableDetail
+              label="Customer ID (CIF)"
+              value={user.reference}
+              copied={copiedField === "cif"}
+              onCopy={() => copy(user.reference, "cif")}
+            />
+            <CopyableDetail
+              label="Panel code"
+              value={user.panelCode}
+              copied={copiedField === "panel"}
+              onCopy={() => copy(user.panelCode, "panel")}
+            />
+            <CopyableDetail
+              label="Referral code"
+              value={user.referralCode}
+              copied={copiedField === "referral"}
+              onCopy={() => copy(user.referralCode, "referral")}
+            />
           </div>
+          <p className="m-0 mt-2 text-[10.5px] text-white/55">
+            Your referral code is issued to this account alone — share it with anyone applying to open an account.
+          </p>
         </div>
 
-        <div className="relative border-t border-white/10 bg-black/15 px-5 sm:px-7 py-3 flex items-center justify-between gap-3 flex-wrap text-[11.5px] text-white/70">
+        <div className="relative border-t border-white/10 bg-black/15 px-4 sm:px-5 py-2.5 flex items-center justify-between gap-3 flex-wrap text-[11px] text-white/70">
           <span>
-            <span className="inline-block w-1.75 h-1.75 rounded-full bg-pos mr-1.5" />
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-pos mr-1.5" />
             Electronic clearing enabled: IMPS, NEFT, RTGS, 2WF Direct
           </span>
           <span>

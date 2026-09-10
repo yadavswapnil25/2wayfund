@@ -45,7 +45,7 @@ export function Brandbar({ onToggleNav }: { onToggleNav: () => void }) {
               </span>
             </div>
             <div className="text-[10.5px] tracking-wide uppercase text-ink-2 mt-0.5">
-              {session.role === "admin" ? "Compliance Console" : "Official Retail & Corporate NetBanking"}
+              {session.role === "admin" ? "Compliance Console" : "Official Retail & Corporate"}
             </div>
           </div>
         </div>

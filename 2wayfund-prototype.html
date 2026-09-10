@@ -1867,11 +1867,11 @@ body.is-public .menu-btn{ display:none; }
     <section class="page" data-route="/open-account" hidden>
       <div class="page-head">
         <h1 class="page-title">Open an Account</h1>
-        <p class="page-lede">Apply with a referral code. Identity verification follows through eKYC before approval. Demo only — no real account is opened.</p>
+        <p class="page-lede">All seven stages of account opening, walked through in order — from referral verification to the live account. Demo only — no real account is opened.</p>
       </div>
 
-      <div class="panel">
-        <div class="panel-head"><h2 class="panel-title">Step 1 — Referral Code</h2></div>
+      <div class="panel" id="oa-gate-wrap">
+        <div class="panel-head"><h2 class="panel-title">Referral Code</h2></div>
         <div class="panel-body">
           <div class="field" id="f-referral">
             <label for="oa-referral">Referral code <span class="req">*</span></label>
@@ -1884,11 +1884,45 @@ body.is-public .menu-btn{ display:none; }
         </div>
       </div>
 
-      <form class="panel" id="oa-form" hidden onsubmit="return false">
-        <div class="panel-head"><h2 class="panel-title">Applicant Details</h2></div>
-        <div class="panel-body">
-          <ol class="flow" id="oa-flow" style="list-style:none;display:flex;flex-wrap:wrap;gap:0;padding:0;margin:0 0 16px"></ol>
+      <div class="panel" id="oa-wizard" hidden>
+        <ol class="stepper" id="oa-stepper"></ol>
 
+        <div style="padding:10px 18px 0;display:flex;justify-content:flex-end">
+          <button class="btn" id="oa-reset" type="button">Reset to sample values</button>
+        </div>
+
+        <!-- Stage 1 — Account selection -->
+        <div class="panel-body" id="oa-stage-1">
+          <div class="callout callout--info" style="margin-bottom:16px">
+            <h3>Stage 1 — Account Selection</h3>
+            <p>Choose the account class, domicile and declared purpose this application is for.</p>
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label for="oa-country">Country</label>
+              <select id="oa-country"></select>
+            </div>
+            <div class="field">
+              <label for="oa-tier">Account tier</label>
+              <select id="oa-tier"></select>
+            </div>
+            <div class="field">
+              <label for="oa-purpose">Purpose of account</label>
+              <select id="oa-purpose"></select>
+            </div>
+          </div>
+          <div id="oa-tier-note"></div>
+          <div class="wiz-actions">
+            <button class="btn btn--primary" id="oa-next-1" type="button">Continue to Application →</button>
+          </div>
+        </div>
+
+        <!-- Stage 2 — Application (personal & contact details) -->
+        <div class="panel-body" id="oa-stage-2" hidden>
+          <div class="callout callout--info" style="margin-bottom:16px">
+            <h3>Stage 2 — Application</h3>
+            <p>Personal identity and contact details for the applicant.</p>
+          </div>
           <div class="form-grid">
             <div class="field" id="f-name">
               <label for="oa-name">Full name <span class="req">*</span></label>
@@ -1938,17 +1972,31 @@ body.is-public .menu-btn{ display:none; }
               <label for="oa-email">Email <span class="req">*</span></label>
               <input id="oa-email" type="email" autocomplete="off">
             </div>
+          </div>
+          <div class="wiz-actions">
+            <button class="btn" id="oa-back-2" type="button">← Back</button>
+            <button class="btn btn--primary" id="oa-next-2" type="button">Continue to Verification →</button>
+          </div>
+        </div>
+
+        <!-- Stage 3 — Identity & business verification -->
+        <div class="panel-body" id="oa-stage-3" hidden>
+          <div class="callout callout--info" style="margin-bottom:16px">
+            <h3>Stage 3 — Identity &amp; Business Verification</h3>
+            <p>Occupation and business details a reviewer uses to assess the application. Identity documents themselves are collected separately, through <a href="#/ekyc">eKYC</a>, once this application is submitted.</p>
+          </div>
+          <div class="form-grid">
             <div class="field" id="f-org">
               <label for="oa-org">Organisation / company <span class="req">*</span></label>
               <input id="oa-org" type="text" autocomplete="off">
             </div>
             <div class="field">
-              <label for="oa-turnover">Annual turnover</label>
-              <select id="oa-turnover"></select>
-            </div>
-            <div class="field">
               <label for="oa-occupation">Occupation</label>
               <select id="oa-occupation"></select>
+            </div>
+            <div class="field">
+              <label for="oa-turnover">Annual turnover</label>
+              <select id="oa-turnover"></select>
             </div>
             <div class="field">
               <label for="oa-income">Annual income</label>
@@ -1962,18 +2010,21 @@ body.is-public .menu-btn{ display:none; }
               <label for="oa-car">Car status</label>
               <select id="oa-car"></select>
             </div>
-            <div class="field">
-              <label for="oa-country">Country</label>
-              <select id="oa-country"></select>
-            </div>
-            <div class="field">
-              <label for="oa-tier">Account tier</label>
-              <select id="oa-tier"></select>
-            </div>
-            <div class="field">
-              <label for="oa-purpose">Purpose of account</label>
-              <select id="oa-purpose"></select>
-            </div>
+          </div>
+          <div class="wiz-actions">
+            <button class="btn" id="oa-back-3" type="button">← Back</button>
+            <button class="btn btn--primary" id="oa-next-3" type="button">Continue to Financial Requirement →</button>
+          </div>
+        </div>
+
+        <!-- Stage 4 — Financial requirement -->
+        <div class="panel-body" id="oa-stage-4" hidden>
+          <div class="callout callout--info" style="margin-bottom:16px">
+            <h3>Stage 4 — Financial Requirement</h3>
+            <p>The stated minimum opening requirement for the selected tier, and why this application crosses a border.</p>
+          </div>
+          <div id="oa-req-note"></div>
+          <div class="form-grid" style="margin-top:16px">
             <div class="field">
               <label for="oa-xb-reason">Cross-border reason</label>
               <select id="oa-xb-reason"></select>
@@ -1982,22 +2033,39 @@ body.is-public .menu-btn{ display:none; }
               <label for="oa-xb-detail">Cross-border detail <span class="req">*</span></label>
               <textarea id="oa-xb-detail" style="min-height:60px"></textarea>
             </div>
+          </div>
+          <div class="wiz-actions">
+            <button class="btn" id="oa-back-4" type="button">← Back</button>
+            <button class="btn btn--primary" id="oa-next-4" type="button">Continue to Compliance Review →</button>
+          </div>
+        </div>
+
+        <!-- Stage 5 — Compliance review -->
+        <div class="panel-body" id="oa-stage-5" hidden>
+          <div class="callout callout--info" style="margin-bottom:16px">
+            <h3>Stage 5 — Compliance Review</h3>
+            <p>Review everything entered, then accept the terms to submit. Stages 6 (Account approval) and 7 (International payment services) are carried out afterwards by a reviewer in the <a href="#/admin">Compliance Console</a>.</p>
+          </div>
+          <div id="oa-review"></div>
+          <div class="form-grid" style="margin-top:16px">
             <div class="field field--wide" id="f-terms">
               <label><input type="checkbox" id="oa-terms"> I accept the <a href="#" id="lnk-terms">Terms &amp; Conditions</a> and have read the <a href="#" id="lnk-privacy">Privacy Policy</a> <span class="req">*</span></label>
             </div>
           </div>
-          <div class="form-actions">
+          <div class="wiz-actions">
+            <button class="btn" id="oa-back-5" type="button">← Back</button>
             <button class="btn btn--primary" id="oa-submit" type="button">Submit Application</button>
-            <button class="btn" id="oa-reset" type="button">Reset to sample values</button>
           </div>
-          <div id="oa-confirm"></div>
         </div>
-      </form>
+
+        <!-- Post-submission — stages 6–7 -->
+        <div class="panel-body panel-body--flush" id="oa-confirm"></div>
+      </div>
 
       <div class="panel">
         <div class="panel-head"><h2 class="panel-title">Account Opening Steps</h2></div>
         <div class="panel-body">
-          <p class="note">The full seven-stage account-opening flow is shown on <a href="#/accounts">Account Types</a>. Stages 1–2 are represented by the form above. Stages 3–6 are carried out by a reviewer in the <a href="#/admin">Compliance Console</a>, where an application can be moved to review, approved or rejected. Stage 7 is the live account shown on <a href="#/">Account Summary</a>. Identity verification runs through <a href="#/ekyc">eKYC</a>.</p>
+          <p class="note">The stepper above walks through the full seven-stage account-opening flow shown on <a href="#/accounts">Account Types</a>. Stages 1–5 are completed on this page. Stage 6 is carried out by a reviewer in the <a href="#/admin">Compliance Console</a>, where an application can be moved to review, approved or rejected. Stage 7 is the live account shown on <a href="#/">Account Summary</a>. Identity verification runs through <a href="#/ekyc">eKYC</a>.</p>
         </div>
       </div>
     </section>
@@ -2037,10 +2105,11 @@ body.is-public .menu-btn{ display:none; }
         </div>
       </div>
       <div class="panel">
-        <div class="panel-head"><h2 class="panel-title">Submit for Review</h2></div>
-        <div class="panel-body" id="kyc-submit-area">
+        <div class="panel-head">
+          <h2 class="panel-title">Submit for Review</h2>
           <span class="panel-note" id="kyc-ref">—</span>
         </div>
+        <div class="panel-body" id="kyc-submit-area"></div>
       </div>
     </section>
 
@@ -3986,9 +4055,10 @@ function validateDob(iso){
 function initOpenAccount(){
   var el_ = function(id){ return document.getElementById(id); };
 
-  var refEl   = el_("oa-referral");
-  var gateBtn = el_("oa-verify");
-  var formEl  = el_("oa-form");
+  var refEl    = el_("oa-referral");
+  var gateBtn  = el_("oa-verify");
+  var gateWrap = el_("oa-gate-wrap");
+  var wizardEl = el_("oa-wizard");
 
   fillSelect(el_("oa-education"), EDUCATION_LEVELS);
   fillSelect(el_("oa-turnover"), TURNOVER_BANDS);
@@ -4034,6 +4104,7 @@ function initOpenAccount(){
      "f-mob-official","f-landline","f-email","f-org","f-xb-detail","f-terms"
     ].forEach(function(id){ setFieldError(id, null); });
     syncSameAddress();
+    renderTierNote();
   }
 
   /* Permanent address mirrors communication while the box is ticked. */
@@ -4061,12 +4132,11 @@ function initOpenAccount(){
     }
   });
 
-  /* ---------- Step 1: the referral gate ---------- */
+  /* ---------- The referral gate ---------- */
 
   function showGateResult(code){
     var host = el_("oa-gate-status");
     host.innerHTML = "";
-    var ok = el_("oa-gate-panel");
     var panel = el("div", "confirm-panel");
     panel.appendChild(el("h3", null, "Referral code accepted"));
     panel.appendChild(el("p", null, code + " — referred by " + REFERRERS[code] + "."));
@@ -4081,8 +4151,12 @@ function initOpenAccount(){
 
     el_("f-referral").hidden = true;
     gateBtn.hidden = true;
-    formEl.hidden = false;
+    gateWrap.hidden = true;
+    wizardEl.hidden = false;
+    el_("oa-reset").hidden = false;
+    el_("oa-confirm").innerHTML = "";
     verifiedCode = code;
+    showOaStage(1);
   }
 
   function closeGate(){
@@ -4090,7 +4164,8 @@ function initOpenAccount(){
     el_("oa-gate-status").innerHTML = "";
     el_("f-referral").hidden = false;
     gateBtn.hidden = false;
-    formEl.hidden = true;
+    gateWrap.hidden = false;
+    wizardEl.hidden = true;
     el_("oa-confirm").innerHTML = "";
     refEl.focus();
   }
@@ -4115,17 +4190,135 @@ function initOpenAccount(){
 
   refEl.addEventListener("keydown", function(e){ if(e.key === "Enter") gateBtn.click(); });
 
-  /* ---------- Step 8: validation ---------- */
+  /* ---------- Stepper: all seven named account-opening stages ---------- */
 
-  function validate(){
+  function renderOaStepper(reached){
+    var root = el_("oa-stepper");
+    root.innerHTML = "";
+    DATA.openingSteps.forEach(function(step, i){
+      var n = i + 1;
+      var li = el("li", n < reached ? "is-done" : n === reached ? "is-current" : "");
+      li.appendChild(el("span", "st-n", n < reached ? "✓" : String(n)));
+      var body = el("span");
+      body.appendChild(el("span", "st-label", step));
+      body.appendChild(el("span", "st-sub", "Stage " + n + " of " + DATA.openingSteps.length));
+      li.appendChild(body);
+      root.appendChild(li);
+    });
+  }
+
+  /* Shows one of the five customer-fillable stages and updates the shared
+     stepper to match. Stages 6–7 (account approval, live services) happen
+     afterwards, off this page — see showOaComplete(). */
+  function showOaStage(n){
+    for(var i = 1; i <= 5; i++){
+      el_("oa-stage-" + i).hidden = (i !== n);
+    }
+    renderOaStepper(n);
+    wizardEl.scrollIntoView({ behavior:"smooth", block:"start" });
+  }
+
+  /* Stage 1: immediate feedback on the tier just picked. */
+  function renderTierNote(){
+    var host = el_("oa-tier-note");
+    if(!host) return;
+    host.innerHTML = "";
+    var tier = DATA.tiers.filter(function(t){ return t.name === el_("oa-tier").value; })[0];
+    if(!tier) return;
+    var box = el("div", "callout");
+    box.style.marginTop = "12px";
+    box.appendChild(el("h3", null, tier.name + " — " + tier.segment + " segment"));
+    box.appendChild(el("p", null, tier.description));
+    box.appendChild(el("p", null,
+      "Stated minimum opening requirement: " + formatCode(tier.openingAmt, tier.currency) + "."));
+    host.appendChild(box);
+  }
+  el_("oa-tier").addEventListener("change", renderTierNote);
+
+  /* Stage 4: the same requirement, restated where "Financial requirement"
+     is the named stage — read from the tier chosen back in Stage 1. */
+  function renderReqNote(){
+    var host = el_("oa-req-note");
+    host.innerHTML = "";
+    var tier = DATA.tiers.filter(function(t){ return t.name === el_("oa-tier").value; })[0];
+    if(!tier) return;
+    var box = el("div", "callout callout--info");
+    box.appendChild(el("h3", null, "Minimum opening requirement — " + tier.name));
+    box.appendChild(el("p", null, formatCode(tier.openingAmt, tier.currency) + " — " + tier.description));
+    host.appendChild(box);
+  }
+
+  /* Stage 5: a read-only recap of every field entered on the earlier
+     stages, grouped the same way the Compliance Console groups it. */
+  function renderReview(){
+    var host = el_("oa-review");
+    host.innerHTML = "";
+    var permanent = el_("oa-same-addr").checked
+      ? el_("oa-addr-comm").value.trim()
+      : el_("oa-addr-perm").value.trim();
+
+    function group(title, pairs){
+      var any = pairs.some(function(p){ return p[1] && String(p[1]).trim(); });
+      if(!any) return;
+      host.appendChild(el("p", "detail-sub", title));
+      var g = el("div", "detail-grid");
+      pairs.forEach(function(p){
+        if(!p[1] || !String(p[1]).trim()) return;
+        var cell = el("div");
+        if(p[2]) cell.style.gridColumn = "1 / -1";
+        cell.appendChild(el("span", "label", p[0]));
+        cell.appendChild(el("p", null, p[1]));
+        g.appendChild(cell);
+      });
+      host.appendChild(g);
+    }
+
+    group("Stage 1 — Account selection", [
+      ["Country", el_("oa-country").value],
+      ["Account tier", el_("oa-tier").value],
+      ["Purpose of account", el_("oa-purpose").value],
+      ["Referral code", verifiedCode ? verifiedCode + " (" + REFERRERS[verifiedCode] + ")" : ""]
+    ]);
+    group("Stage 2 — Application", [
+      ["Full name", el_("oa-name").value],
+      ["Father’s / husband’s name", el_("oa-father").value],
+      ["Date of birth", el_("oa-dob").value
+        ? isoToDisplay(el_("oa-dob").value) + " (age " + ageOn(el_("oa-dob").value, todayIso()) + ")" : ""],
+      ["Education", el_("oa-education").value],
+      ["Communication address", el_("oa-addr-comm").value, true],
+      ["Permanent address", permanent, true],
+      ["Office address", el_("oa-addr-off").value, true],
+      ["Personal mobile", el_("oa-mob-personal").value],
+      ["Official mobile", el_("oa-mob-official").value],
+      ["Landline", el_("oa-landline").value],
+      ["Email", el_("oa-email").value]
+    ]);
+    group("Stage 3 — Identity & business verification", [
+      ["Organisation", el_("oa-org").value],
+      ["Occupation", el_("oa-occupation").value],
+      ["Annual turnover", el_("oa-turnover").value],
+      ["Annual income", el_("oa-income").value],
+      ["Home status", el_("oa-home").value],
+      ["Car status", el_("oa-car").value]
+    ]);
+    group("Stage 4 — Financial requirement", [
+      ["Cross-border reason", el_("oa-xb-reason").value],
+      ["Cross-border detail", el_("oa-xb-detail").value, true]
+    ]);
+  }
+
+  /* ---------- Per-stage validation, split from the same checks the
+     original single-panel form ran, so every field keeps its rule. ---------- */
+
+  function validateStage2(){
     var ok = true;
     function need(fieldId, value, message){
       if(!String(value).trim()){ setFieldError(fieldId, message); ok = false; return false; }
       setFieldError(fieldId, null); return true;
     }
 
-    need("f-name",   el_("oa-name").value,   "Enter the applicant\u2019s full name.");
-    need("f-father", el_("oa-father").value, "Enter the father\u2019s or husband\u2019s name.");
+    need("f-name",   el_("oa-name").value,   "Enter the applicant’s full name.");
+    need("f-father", el_("oa-father").value, "Enter the father’s or husband’s name.");
 
     var dobErr = validateDob(el_("oa-dob").value);
     if(dobErr){ setFieldError("f-dob", dobErr); ok = false; } else setFieldError("f-dob", null);
@@ -4137,12 +4330,12 @@ function initOpenAccount(){
 
     var mp = el_("oa-mob-personal").value.trim();
     if(!mp){ setFieldError("f-mob-personal", "Enter a personal mobile number."); ok = false; }
-    else if(!validPhone(mp)){ setFieldError("f-mob-personal", "Use 7\u201315 digits, with an optional leading +."); ok = false; }
+    else if(!validPhone(mp)){ setFieldError("f-mob-personal", "Use 7–15 digits, with an optional leading +."); ok = false; }
     else setFieldError("f-mob-personal", null);
 
     [["f-mob-official","oa-mob-official"], ["f-landline","oa-landline"]].forEach(function(p){
       var v = el_(p[1]).value.trim();
-      if(v && !validPhone(v)){ setFieldError(p[0], "Use 7\u201315 digits, with an optional leading +."); ok = false; }
+      if(v && !validPhone(v)){ setFieldError(p[0], "Use 7–15 digits, with an optional leading +."); ok = false; }
       else setFieldError(p[0], null);
     });
 
@@ -4152,20 +4345,45 @@ function initOpenAccount(){
       setFieldError("f-email", "Enter an email in a valid format."); ok = false;
     } else setFieldError("f-email", null);
 
-    need("f-org", el_("oa-org").value, "Enter the organisation or company name.");
+    return ok;
+  }
 
+  function validateStage3(){
+    var ok = true;
+    if(!el_("oa-org").value.trim()){
+      setFieldError("f-org", "Enter the organisation or company name."); ok = false;
+    } else setFieldError("f-org", null);
+    return ok;
+  }
+
+  function validateStage4(){
+    var ok = true;
     var xb = el_("oa-xb-detail").value.trim();
     if(xb.length < 20){
       setFieldError("f-xb-detail", "Give at least 20 characters explaining the connection to that country.");
       ok = false;
     } else setFieldError("f-xb-detail", null);
+    return ok;
+  }
 
+  function validateStage5(){
+    var ok = true;
     if(!el_("oa-terms").checked){
       setFieldError("f-terms", "You must accept the terms and conditions to continue."); ok = false;
     } else setFieldError("f-terms", null);
-
     return ok;
   }
+
+  /* ---------- Wizard navigation ---------- */
+
+  el_("oa-next-1").addEventListener("click", function(){ showOaStage(2); });
+  el_("oa-back-2").addEventListener("click", function(){ showOaStage(1); });
+  el_("oa-next-2").addEventListener("click", function(){ if(validateStage2()) showOaStage(3); });
+  el_("oa-back-3").addEventListener("click", function(){ showOaStage(2); });
+  el_("oa-next-3").addEventListener("click", function(){ if(validateStage3()){ renderReqNote(); showOaStage(4); } });
+  el_("oa-back-4").addEventListener("click", function(){ showOaStage(3); });
+  el_("oa-next-4").addEventListener("click", function(){ if(validateStage4()){ renderReview(); showOaStage(5); } });
+  el_("oa-back-5").addEventListener("click", function(){ showOaStage(4); });
 
   el_("oa-terms").addEventListener("change", function(){
     if(el_("oa-terms").checked) setFieldError("f-terms", null);
@@ -4178,7 +4396,7 @@ function initOpenAccount(){
 
   el_("oa-submit").addEventListener("click", function(){
     if(!verifiedCode){ closeGate(); return; }
-    if(!validate()) return;
+    if(!validateStage5()) return;
 
     var permanent = el_("oa-same-addr").checked
       ? el_("oa-addr-comm").value.trim()
@@ -4225,17 +4443,74 @@ function initOpenAccount(){
     DATA.applications.unshift(application);
     renderAdmin();
     refreshKycApps();
-    showConfirmation(application);
+    showOaComplete(application);
   });
+
+  /* ---------- Post-submission: stages 6–7, carried out off this page ---------- */
+
+  function showOaComplete(application){
+    for(var i = 1; i <= 5; i++) el_("oa-stage-" + i).hidden = true;
+    el_("oa-reset").hidden = true;
+    renderOaStepper(STAGE_FOR_STATUS[application.status] || 1);
+
+    var root = el_("oa-confirm");
+    root.innerHTML = "";
+
+    var panel = el("div", "confirm-panel");
+    panel.style.margin = "16px 18px";
+    panel.appendChild(el("h3", null, "Application received"));
+    panel.appendChild(el("div", "label", "Your reference number"));
+    panel.appendChild(el("div", "confirm-ref", application.ref));
+
+    panel.appendChild(el("p", null,
+      application.name + " — " + application.tier + " (" + application.country + "). " +
+      "Status: Submitted. It now appears at the top of the reviewer queue awaiting a compliance decision."));
+
+    if(application.xbReason){
+      panel.appendChild(el("p", null,
+        "Cross-border reason recorded: " + application.xbReason + "."));
+    }
+
+    if(application.referral){
+      panel.appendChild(el("p", null,
+        "Referral code " + application.referral + " (" + application.referrer + "). " +
+        "Terms and conditions accepted at " + application.termsAcceptedAt + "."));
+    }
+
+    var warn = el("p", null,
+      "No account has been opened, no funds have been collected and no identity documents were requested or stored. " +
+      "This record exists only in this browser tab and is discarded on reload.");
+    warn.style.color = "var(--neg)";
+    warn.style.fontWeight = "600";
+    panel.appendChild(warn);
+
+    var next = el("p", null,
+      "Next step: complete eKYC verification (stage 3 continues there). Stages 6 and 7 — account approval and " +
+      "live international payment services — follow once a compliance officer reviews this application.");
+    panel.appendChild(next);
+
+    var actions = el("p");
+    var kycLink = el("a", null, "Continue to eKYC ›");
+    kycLink.href = "#/ekyc";
+    actions.appendChild(kycLink);
+    actions.appendChild(document.createTextNode("  ·  "));
+    var link = el("a", null, "Compliance Console ›");
+    link.href = "#/admin";
+    actions.appendChild(link);
+    panel.appendChild(actions);
+
+    root.appendChild(panel);
+    panel.scrollIntoView({ behavior:"smooth", block:"nearest" });
+  }
 
   el_("lnk-terms").addEventListener("click", function(e){
     e.preventDefault();
     openModal("Terms & Conditions — summary", [
       "This is a fictional summary presented inside an academic design prototype. It is not a legal document and creates no rights or obligations for anyone.",
-      "1. Eligibility. An application does not create an account. Acceptance is at the institution\u2019s discretion following identity, business and compliance review.",
+      "1. Eligibility. An application does not create an account. Acceptance is at the institution’s discretion following identity, business and compliance review.",
       "2. Charges. Eligible transactions attract commission per the published Fees & Service Charges schedule. Internal transfers between two 2 Way Fund accounts attract no charge.",
       "3. Security. You are responsible for keeping your credentials confidential. The institution will never ask you for your password, transaction password or one-time code, and will never require a payment to unlock, verify or release funds already shown as available.",
-      "4. Beneficiaries. A newly registered beneficiary is held for a cooling-off period before its first settlement. That hold clears on the institution\u2019s schedule and is never accelerated by a payment.",
+      "4. Beneficiaries. A newly registered beneficiary is held for a cooling-off period before its first settlement. That hold clears on the institution’s schedule and is never accelerated by a payment.",
       "5. Prototype notice. No account is opened, no funds are collected and no document is retained anywhere in this demonstration."
     ]);
   });
@@ -4253,55 +4528,6 @@ function initOpenAccount(){
   });
 
   applyDefaults();
-}
-
-function showConfirmation(application){
-  var root = document.getElementById("oa-confirm");
-  root.innerHTML = "";
-
-  var panel = el("div", "confirm-panel");
-  panel.appendChild(el("h3", null, "Application received"));
-  panel.appendChild(el("div", "label", "Your reference number"));
-  panel.appendChild(el("div", "confirm-ref", application.ref));
-
-  panel.appendChild(el("p", null,
-    application.name + " — " + application.tier + " (" + application.country + "). " +
-    "Status: Submitted. It now appears at the top of the reviewer queue awaiting a compliance decision."));
-
-  if(application.xbReason){
-    panel.appendChild(el("p", null,
-      "Cross-border reason recorded: " + application.xbReason + "."));
-  }
-
-  if(application.referral){
-    panel.appendChild(el("p", null,
-      "Referral code " + application.referral + " (" + application.referrer + "). " +
-      "Terms and conditions accepted at " + application.termsAcceptedAt + "."));
-  }
-
-  var warn = el("p", null,
-    "No account has been opened, no funds have been collected and no identity documents were requested or stored. " +
-    "This record exists only in this browser tab and is discarded on reload.");
-  warn.style.color = "var(--neg)";
-  warn.style.fontWeight = "600";
-  panel.appendChild(warn);
-
-  var next = el("p", null,
-    "Next step: complete eKYC verification. Identity documents are reviewed before the account is approved.");
-  panel.appendChild(next);
-
-  var actions = el("p");
-  var kycLink = el("a", null, "Continue to eKYC ›");
-  kycLink.href = "#/ekyc";
-  actions.appendChild(kycLink);
-  actions.appendChild(document.createTextNode("\u00A0\u00A0·\u00A0\u00A0"));
-  var link = el("a", null, "Compliance Console ›");
-  link.href = "#/admin";
-  actions.appendChild(link);
-  panel.appendChild(actions);
-
-  root.appendChild(panel);
-  panel.scrollIntoView({ behavior:"smooth", block:"nearest" });
 }
 
 /* ============================================================
@@ -9689,7 +9915,6 @@ renderAccounts();
 renderTransactions();
 renderTiers();
 renderFlow("opening-flow", DATA.openingSteps, true);
-renderFlow("oa-flow", DATA.openingSteps, true);
 renderFlow("fx-flow", DATA.fxFlow, true);
 renderFlow("fx-process-flow", DATA.exchangeProcess, true);
 renderFlow("exchange-process-flow", DATA.exchangeProcess, true);

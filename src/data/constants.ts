@@ -41,7 +41,7 @@ export const ROUTES: RouteDef[] = [
   { path: "/fee-policy", tab: "Fee Policy", crumb: "Services › Fee Policy", group: "Services", access: "public" },
   { path: "/transaction-security", tab: "Transaction Security", crumb: "Services › Transaction Security", group: "Services", access: "public" },
   { path: "/privacy-policy", tab: "Privacy Policy", crumb: "Services › Privacy Policy", group: "Services", access: "public" },
-  { path: "/open-account", tab: "Open an Account", crumb: "Services › Open an Account", group: "Services", access: "anon" },
+  { path: "/open-account", tab: "Apply for an Account", crumb: "Services › Apply for an Account", group: "Services", access: "anon" },
   { path: "/ekyc", tab: "eKYC", crumb: "Services › eKYC Verification", group: "Services", access: "public" },
   { path: "/fees", tab: "Charges", crumb: "Services › Fees & Charges", group: "Services", access: "public" },
   { path: "/security", tab: "Security", crumb: "Security › Security & KYC", group: "Services", access: "public" },
@@ -135,12 +135,6 @@ export const SECTORS: Sector[] = [
   { name: "Manufacturing", members: ["Ironmoor Industries", "Castlewick Components", "Salter & Vane Ltd"] },
   { name: "Professional services", members: ["Ashcroft Advisory", "Pelham Legal LLP", "Rowan Audit Partners"] },
 ];
-
-export const REFERRERS: Record<string, string> = {
-  "2WF-DEMO01": "Demonstration partner",
-  "2WF-PART22": "Northvale Systems Ltd — channel partner",
-  "2WF-STAFF7": "Internal staff referral",
-};
 
 export const MSG_TEMPLATES = [
   { label: "— blank —", category: null as string | null, subject: "", body: "" },

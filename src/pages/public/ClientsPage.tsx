@@ -1,15 +1,28 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
 import { PageHead } from "../../components/ui/Flow";
 import { Panel, PanelBody, PanelHead } from "../../components/ui/Panel";
-import { Callout, KV } from "../../components/ui/Misc";
+import { KV } from "../../components/ui/Misc";
 import { monogram } from "../../lib/format";
-import { CLIENTS, CLIENTS_INTRO, CONNECTING_STATEMENT, INDUSTRY_GROUPS } from "../../data/clientContent";
+import { CLIENTS, CLIENTS_INTRO, CONNECTING_STATEMENT, INDUSTRY_GROUPS, type Client } from "../../data/clientContent";
 
-function ClientCard({ name, industry, description }: { name: string; industry: string; description: string }) {
+function ClientCard({ name, industry, description, logo }: Client) {
+  const [logoFailed, setLogoFailed] = useState(false);
+
   return (
     <div className="bg-white border border-border-lt rounded-lg p-4.5 shadow-sm flex gap-3.5">
-      <span className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#E8D6A8] to-gold text-navy-dk text-[11px] font-bold flex items-center justify-center flex-shrink-0">
-        {monogram(name)}
+      <span className="w-14 h-14 rounded-lg border border-border-lt bg-white flex items-center justify-center flex-shrink-0 overflow-hidden p-1.5">
+        {logoFailed ? (
+          <span className="w-full h-full rounded-md bg-gradient-to-br from-[#E8D6A8] to-gold text-navy-dk text-[11px] font-bold flex items-center justify-center">
+            {monogram(name)}
+          </span>
+        ) : (
+          <img
+            src={logo}
+            alt={`${name} logo`}
+            className="max-w-full max-h-full object-contain"
+            onError={() => setLogoFailed(true)}
+          />
+        )}
       </span>
       <div className="min-w-0">
         <h3 className="text-[13px] mb-0.5">{name}</h3>
@@ -54,16 +67,6 @@ export function ClientsPage() {
         <p className="m-0 text-[13px] text-gold font-bold uppercase tracking-wide">2 Way Fund International</p>
         <p className="m-0 mt-1 text-[12px] text-white/70">Connecting Countries. Converting Currencies. Enabling Global Payments.</p>
       </div>
-
-      <Callout title="Every name on this page is invented" variant="warn" className="mt-5.5 mb-0">
-        <p>
-          Naming a real company as a client here would assert a business relationship that doesn't exist — misleading the moment it's
-          seen out of context. Every organisation above is fictional, created for this prototype, and every "logo" is a generated
-          monogram derived from the invented name, not fetched from anywhere. See{" "}
-          <Link to="/company" className="text-navy-lt hover:underline">About Us</Link> for the institution these fictional clients are
-          shown transacting through.
-        </p>
-      </Callout>
     </>
   );
 }

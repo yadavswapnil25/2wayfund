@@ -12,6 +12,9 @@ export function createSeedStore(): Store {
       accountTier: "Master Account",
       segment: "Platinum",
       reference: "2WFMP04817",
+      // Matches this customer's row in the backend seeder
+      // (2wayfund-API database/seeders/DatabaseSeeder.php).
+      referralCode: "2WF-ADT417",
       pan: "ABCDE1234F",
       // One account number carries every transaction on the relationship.
       // Shown in full — this account belongs to the customer viewing it.
@@ -116,7 +119,8 @@ export function createSeedStore(): Store {
     ],
 
     tiers: [
-      { name: "Corporate Account", segment: "Diamond", openingAmt: 10000000, currency: "INR", description: "Institutional and business accounts with the full international payment service set." },
+      { name: "Corporate Account", segment: "Diamond", openingAmt: 100000, currency: "USD", description: "Institutional and business accounts with the full international payment service set." },
+      { name: "Corporate Account – General", segment: "Corporate", openingAmt: 50000, currency: "USD", description: "Standard corporate account for smaller businesses — core international payments, conversion and multi-currency ledgers." },
       { name: "3D Account", segment: "Gold", openingAmt: 20000, currency: "USD", description: "Highest individual tier; priority handling on cross-border settlement." },
       { name: "Master Account", segment: "Platinum", openingAmt: 18000, currency: "USD", description: "Multi-currency ledgers with full card issuance and exchange access." },
       { name: "Classic Account", segment: "Silver", openingAmt: 15000, currency: "USD", description: "Standard international account with debit and recharge card eligibility." },

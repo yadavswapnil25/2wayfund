@@ -14,6 +14,10 @@ export interface User {
   accountTier: string;
   segment: string;
   reference: string;
+  /** The one referral code this account owns. Unique across accounts —
+   * a code identifies exactly one customer, and this customer holds
+   * exactly one code. Issued by the backend at account provisioning. */
+  referralCode: string;
   pan: string;
   accountNumber: string;
   country: string;
@@ -262,15 +266,39 @@ export interface Application {
   customerId?: string;
   name: string;
   fatherName?: string;
+  dob?: string;
+  education?: string;
+  addressCommunication?: string;
+  addressPermanent?: string;
+  addressOffice?: string;
+  mobilePersonal?: string;
+  mobileOfficial?: string;
+  landline?: string;
   email: string;
   country: string;
   tier: string;
   purpose: string;
+  organisation?: string;
+  annualTurnover?: string;
+  occupation?: string;
+  annualIncome?: string;
+  homeStatus?: string;
+  carStatus?: string;
+  crossBorderReason?: string;
+  crossBorderDetail?: string;
   referral: string;
   referrer: string;
   termsAcceptedAt: string;
   submitted: string;
   status: "Submitted" | "Under review" | "Approved" | "Rejected";
+  /** Whether each document has actually been persisted on the backend —
+   * distinct from the eKYC page's own local document checklist (kyc
+   * below), which tracks the full identity-document set client-side.
+   * Signature is required for every application; business certificate
+   * only for a Corporate Account tier. */
+  hasPhoto?: boolean;
+  hasSignature?: boolean;
+  hasBusinessCertificate?: boolean;
   kyc?: Kyc;
   audit: ApplicationAudit[];
 }
