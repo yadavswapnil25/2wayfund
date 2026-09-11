@@ -1,6 +1,6 @@
-import { useState, type ComponentType } from "react";
+import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Check, CheckCircle2, Eye, EyeOff, KeyRound, Lock, ShieldAlert, X } from "lucide-react";
+import { Check, CheckCircle2, Eye, EyeOff, KeyRound, Lock, ShieldAlert, X, type LucideIcon } from "lucide-react";
 import { Panel, PanelBody } from "../../components/ui/Panel";
 import { Field, TextInput } from "../../components/ui/Field";
 import { Btn } from "../../components/ui/Button";
@@ -16,7 +16,7 @@ function Banner({
   title,
   subtitle,
 }: {
-  icon: ComponentType<{ size?: number }>;
+  icon: LucideIcon;
   accentClass: string;
   title: string;
   subtitle: string;

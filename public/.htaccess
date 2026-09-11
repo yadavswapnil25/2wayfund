@@ -1,0 +1,15 @@
+# Single-page app: send any request that isn't a real file or directory
+# to index.html so React Router (BrowserRouter) can handle the path
+# client-side. Without this, a direct hit or refresh on any route other
+# than "/" 404s at the Apache level before the app ever loads.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Let real files/directories (assets, images, etc.) be served as-is.
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  RewriteRule ^ index.html [L]
+</IfModule>
