@@ -129,8 +129,8 @@ export function createSeedStore(): Store {
     ],
 
     cards: [
-      { type: "Debit", last4: "4417", expiry: "09/29", forms: ["Digital", "Physical"], capability: "ATM cash withdrawal, point-of-sale purchase and online payment against available balance.", funding: "ledger", currency: "USD", capPerTxn: 25000, capNote: "Point-of-sale daily cap" },
-      { type: "Credit", last4: "8206", expiry: "09/29", forms: ["Digital", "Physical"], capability: "High-value swipe and transaction capability over supported international payment networks.", funding: "credit", currency: "USD", creditLimit: 50000, outstanding: 12400 },
+      { id: "seed-debit", type: "Debit", last4: "4417", expiry: "09/29", cvv: "412", forms: ["Digital", "Physical"], capability: "ATM cash withdrawal, point-of-sale purchase and online payment against available balance.", funding: "ledger", currency: "USD", capPerTxn: 25000, capNote: "Point-of-sale daily cap" },
+      { id: "seed-credit", type: "Credit", last4: "8206", expiry: "09/29", cvv: "820", forms: ["Digital", "Physical"], capability: "High-value swipe and transaction capability over supported international payment networks.", funding: "credit", currency: "USD", creditLimit: 50000, outstanding: 12400 },
     ],
 
     cardLimits: [

@@ -24,6 +24,7 @@ import { KYC_DOCS, KYC_STAGES, VIDEO_KYC_SLOTS, freshKyc, humanSize, kycStageInd
 import { stamp } from "../../lib/dates";
 import { ApiError } from "../../services/apiClient";
 import { getApplication, uploadApplicationPhoto } from "../../services/applicationService";
+import { EkycAccessGate } from "./EkycAccessGate";
 
 const DOC_ICONS: Record<string, typeof Camera> = { photo: Camera, signature: PenLine, aadhaar: IdCard, pan: IdCard };
 
@@ -38,13 +39,16 @@ function docTagVariant(status: KycDocument["status"]): string {
 }
 
 export function EkycPage() {
-  const { store, setStore } = useApp();
+  const { store, setStore, session } = useApp();
   const [searchParams] = useSearchParams();
   // A ref in the URL means we arrived from a real Apply for an Account
   // submission — that application lives in the real backend, so its photo
   // upload should too. Without one (e.g. reached via nav), we're looking
   // at the seeded demo data, which the real backend has never heard of.
   const refParam = searchParams.get("ref");
+  // Set once the Customer-ID + email-OTP access gate resolves an
+  // application for a public visitor with neither a ref nor a session.
+  const [resolvedRef, setResolvedRef] = useState<string | null>(null);
   const [previews, setPreviews] = useState<Record<string, { url: string; mime: string }>>({});
   const [cameraDocId, setCameraDocId] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -71,10 +75,19 @@ export function EkycPage() {
 
   useEffect(() => stopCamera, []);
 
-  const app = useMemo(
-    () => store.applications.find((a) => (refParam ? a.ref === refParam : a.customerId === store.user.id)) ?? null,
-    [store.applications, store.user.id, refParam]
-  );
+  // Resolves which application this visit is about, in priority order: an
+  // explicit ref in the URL, one just unlocked through the Customer-ID +
+  // OTP access gate, or (only for an actually signed-in customer) their
+  // own account's application. Falling back to store.user.id for anyone
+  // else would spuriously match the seed demo data — the seed user and
+  // seed application share a fake id by design — showing a stranger's
+  // "own" application to an anonymous public visitor.
+  const app = useMemo(() => {
+    const wantedRef = refParam ?? resolvedRef;
+    if (wantedRef) return store.applications.find((a) => a.ref === wantedRef) ?? null;
+    if (session.role !== "customer") return null;
+    return store.applications.find((a) => a.customerId === store.user.id) ?? null;
+  }, [store.applications, store.user.id, refParam, resolvedRef, session.role]);
 
   // The application only lives in this browser tab's memory once someone
   // has clicked through from Apply for an Account in the same session — a
@@ -102,9 +115,22 @@ export function EkycPage() {
     };
   }, [refParam, app, setStore]);
 
+  // The access gate's confirm step already returns the full application —
+  // no second round-trip needed, just merge it in and let the app memo
+  // above pick it up via resolvedRef.
+  function handleGateResolved(application: Omit<Application, "kyc">) {
+    setStore((s) => ({ ...s, applications: [{ ...application, kyc: freshKyc() }, ...s.applications] }));
+    setResolvedRef(application.ref);
+  }
+
   const kyc = app?.kyc ?? null;
   const locked = kyc ? kyc.status === "Verified" || kyc.status === "Under verification" : false;
   const allProvided = kyc ? kyc.documents.every((d) => d.status !== "Not provided") : false;
+  // The access gate only helps an anonymous visitor with neither a ref nor
+  // a session to resolve from — a signed-in customer with no application
+  // yet, or a direct ref link that failed to load, get their own message
+  // instead (see the "Your Application" card below).
+  const showAccessGate = !app && !fetchingApplication && !refParam && session.role !== "customer";
 
   function updateApp(ref: string, fn: (a: Application) => Application) {
     setStore((s) => ({ ...s, applications: s.applications.map((a) => (a.ref === ref ? fn(a) : a)) }));
@@ -342,13 +368,17 @@ export function EkycPage() {
         </div>
 
         {!app ? (
-          <p className="text-center py-10 text-ink-2 text-[12.5px]">
-            {fetchingApplication
-              ? "Loading your application…"
-              : fetchError
-                ? fetchError
-                : "No identity verification record found for this account."}
-          </p>
+          showAccessGate ? (
+            <EkycAccessGate onResolved={handleGateResolved} />
+          ) : (
+            <p className="text-center py-10 text-ink-2 text-[12.5px]">
+              {fetchingApplication
+                ? "Loading your application…"
+                : fetchError
+                  ? fetchError
+                  : "No identity verification record found for this account."}
+            </p>
+          )
         ) : (
           <Stepper current={stageIdx} steps={KYC_STAGES} />
         )}

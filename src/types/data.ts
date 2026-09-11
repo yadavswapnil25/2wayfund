@@ -79,9 +79,11 @@ export interface Tier {
 }
 
 export interface Card {
+  id: string;
   type: "Debit" | "Credit";
   last4: string;
   expiry: string;
+  cvv: string;
   forms: string[];
   capability: string;
   funding: "ledger" | "credit" | "prepaid";

@@ -91,6 +91,7 @@ export const PUBLIC_NAV_GROUPS: PublicNavGroup[] = [
       { label: "Card Services", path: "/card-services" },
       { label: "Exchange Services", path: "/exchange-services" },
       { label: "Fee Policy", path: "/fee-policy" },
+      { label: "eKYC Verification", path: "/ekyc" },
     ],
   },
   {

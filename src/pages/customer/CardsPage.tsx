@@ -1,8 +1,12 @@
-import { ShieldCheck, Wifi } from "lucide-react";
+import { useCallback, useEffect, useState, type MouseEvent } from "react";
+import { RotateCw, ShieldCheck, Wifi } from "lucide-react";
 import { PageHead } from "../../components/ui/Flow";
 import { Tag } from "../../components/ui/Tag";
+import { Note } from "../../components/ui/Misc";
 import { useApp } from "../../state/AppContext";
 import { formatCode } from "../../lib/format";
+import { listCards } from "../../services/cardService";
+import { getMe } from "../../services/meService";
 import type { Card } from "../../types/data";
 
 function fundingLabel(c: Card): string {
@@ -11,21 +15,43 @@ function fundingLabel(c: Card): string {
   return `Linked to ${c.currency} ledger`;
 }
 
-function CardVisual({ c, holder }: { c: Card; holder: string }) {
+function CardLogo({ dark }: { dark: boolean }) {
+  const [logoError, setLogoError] = useState(false);
+  if (logoError) {
+    return (
+      <div className={`h-6 w-6 rounded flex items-center justify-center font-bold text-[9px] flex-none ${dark ? "bg-white/15 text-white" : "bg-white/90 text-navy"}`}>
+        2WF
+      </div>
+    );
+  }
+  return (
+    <img
+      src="/logo.png"
+      alt="2 Way Fund International"
+      className="h-6 w-6 rounded object-contain flex-none bg-white/90"
+      onError={() => setLogoError(true)}
+    />
+  );
+}
+
+function CardFront({ c, holder }: { c: Card; holder: string }) {
   const isCredit = c.type === "Credit";
   return (
     <div
-      className={`relative overflow-hidden rounded-xl aspect-[1.586] max-w-[280px] mx-auto p-3.5 text-white shadow-lg ${
+      className={`absolute inset-0 overflow-hidden rounded-xl p-3.5 text-white shadow-lg [backface-visibility:hidden] ${
         isCredit ? "bg-gradient-to-br from-[#20242F] via-[#171A22] to-[#0C0E13]" : "bg-gradient-to-br from-navy-dk via-navy to-navy-lt"
       }`}
     >
       <div className={`pointer-events-none absolute -top-8 -right-8 w-28 h-28 rounded-full blur-2xl ${isCredit ? "bg-gold/25" : "bg-white/10"}`} />
 
-      <div className="relative flex items-start justify-between">
-        <div className="text-[10.5px] font-bold tracking-wide">
-          2 WAY FUND <span className="font-normal text-white/70">International</span>
+      <div className="relative flex items-start justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <CardLogo dark={isCredit} />
+          <div className="text-[10.5px] font-bold tracking-wide">
+            2 WAY FUND <span className="font-normal text-white/70">International</span>
+          </div>
         </div>
-        <Wifi size={14} className="rotate-90 text-white/70" />
+        <Wifi size={14} className="rotate-90 text-white/70 flex-none" />
       </div>
 
       <div className="relative mt-2.5 flex items-center gap-2">
@@ -33,9 +59,7 @@ function CardVisual({ c, holder }: { c: Card; holder: string }) {
         <span className="text-[9px] font-bold uppercase tracking-widest text-white/70">{c.type}</span>
       </div>
 
-      <div className="relative mt-2.5 font-num tabular-nums text-[13px] tracking-[0.1em]">
-        •••• •••• •••• {c.last4}
-      </div>
+      <div className="relative mt-2.5 font-num tabular-nums text-[13px] tracking-[0.1em]">•••• •••• •••• {c.last4}</div>
 
       <div className="relative mt-2.5 flex items-end justify-between">
         <div>
@@ -47,57 +71,179 @@ function CardVisual({ c, holder }: { c: Card; holder: string }) {
           <span className="block text-[10.5px] font-semibold font-num">{c.expiry}</span>
         </div>
       </div>
+
+      <span className="absolute bottom-2 right-3 text-[8.5px] text-white/40 flex items-center gap-1">
+        <RotateCw size={9} /> Tap to flip
+      </span>
+    </div>
+  );
+}
+
+function CardBack({ c, cvvRevealed, onToggleCvv }: { c: Card; cvvRevealed: boolean; onToggleCvv: (e: MouseEvent) => void }) {
+  const isCredit = c.type === "Credit";
+  return (
+    <div
+      className={`absolute inset-0 overflow-hidden rounded-xl text-white shadow-lg [backface-visibility:hidden] [transform:rotateY(180deg)] ${
+        isCredit ? "bg-gradient-to-br from-[#20242F] via-[#171A22] to-[#0C0E13]" : "bg-gradient-to-br from-navy-dk via-navy to-navy-lt"
+      }`}
+    >
+      <div className="mt-3.5 h-8 bg-[#0B0D12]" />
+
+      <div className="px-3.5 mt-3 flex items-center gap-2">
+        <div className="flex-1 h-6 bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.65),rgba(255,255,255,0.65)_3px,rgba(255,255,255,0.4)_3px,rgba(255,255,255,0.4)_6px)] rounded-sm" />
+        <button
+          type="button"
+          onClick={onToggleCvv}
+          aria-label={cvvRevealed ? "Hide CVV" : "Show CVV"}
+          className="flex-none w-11 h-6 rounded-sm bg-white/90 flex items-center justify-center cursor-pointer border-0"
+        >
+          <span className="text-[9px] font-num tracking-widest text-ink italic">{cvvRevealed ? c.cvv : "•••"}</span>
+        </button>
+      </div>
+
+      <div className="px-3.5 mt-2 text-[7.5px] text-white/45">Tap the strip to {cvvRevealed ? "hide" : "show"} the CVV (prototype value)</div>
+
+      <div className="px-3.5 mt-1.5 text-[8px] text-white/55 leading-relaxed">
+        This card remains the property of 2 Way Fund International. A real institution never redisplays a security code once a card is issued —
+        this value is shown only because this is a design prototype, not a real financial service.
+      </div>
+
+      <div className="absolute bottom-2.5 left-3.5 right-3.5 flex items-end justify-between">
+        <div>
+          <span className="block text-[8px] uppercase tracking-wide text-white/55">24×7 Cardholder Support</span>
+          <span className="block text-[10.5px] font-semibold font-num">1800-2WF-HELP</span>
+        </div>
+        <CardLogo dark={isCredit} />
+      </div>
+    </div>
+  );
+}
+
+function FlippableCard({ c, holder }: { c: Card; holder: string }) {
+  const [flipped, setFlipped] = useState(false);
+  const [cvvRevealed, setCvvRevealed] = useState(false);
+
+  function toggleCvv(e: MouseEvent) {
+    e.stopPropagation();
+    setCvvRevealed((r) => !r);
+  }
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => setFlipped((f) => !f)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setFlipped((f) => !f);
+        }
+      }}
+      aria-label={`${c.type} card ending in ${c.last4} — select to flip and view the other side`}
+      className="block w-full max-w-[280px] mx-auto [perspective:1200px] cursor-pointer"
+    >
+      <div
+        className={`relative aspect-[1.586] transition-transform duration-500 [transform-style:preserve-3d] ${flipped ? "[transform:rotateY(180deg)]" : ""}`}
+      >
+        <CardFront c={c} holder={holder} />
+        <CardBack c={c} cvvRevealed={cvvRevealed} onToggleCvv={toggleCvv} />
+      </div>
     </div>
   );
 }
 
 export function CardsPage() {
-  const { store } = useApp();
+  const { store, setStore, session } = useApp();
+  const [cards, setCards] = useState<Card[]>(store.cards);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const loadCards = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!session.token) return;
+      try {
+        const real = await listCards(session.token, signal);
+        setCards(real);
+        setLoadError(null);
+      } catch {
+        if (signal?.aborted) return;
+        // Best-effort — the seed/last-known cards stay displayed.
+      }
+    },
+    [session.token],
+  );
+
+  // The shared store's user profile is only fresh once some other page has
+  // fetched /me — a customer can easily land here first (bookmark, or
+  // straight after login on another page), so this page fetches its own
+  // copy too rather than trusting the cardholder name is already current
+  // (matches ExchangePage, PinSecurityPage, TransferFundsPage).
+  useEffect(() => {
+    const controller = new AbortController();
+    const token = session.token;
+    if (!token) return;
+
+    void loadCards(controller.signal);
+    void getMe(token, controller.signal)
+      .then((me) => setStore((s) => ({ ...s, user: { ...s.user, ...me } })))
+      .catch(() => {
+        // Best-effort — the seed/last-known cardholder name stays displayed.
+      });
+
+    return () => controller.abort();
+  }, [session.token, setStore, loadCards]);
 
   return (
     <>
-      <PageHead title="Cards & Digital Payments" lede="Digital and physical cards issued against this account." />
+      <PageHead title="Cards & Digital Payments" lede="Digital and physical cards issued against this account. Select a card to flip it." />
 
-      <div className="grid gap-5 sm:grid-cols-2 mb-5">
-        {store.cards.map((c) => (
-          <div key={c.last4} className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
-            <div className="p-4.5 sm:p-5">
-              <CardVisual c={c} holder={store.user.name} />
-            </div>
-            <div className="px-4.5 sm:px-5 pb-4.5 sm:pb-5">
-              <p className="m-0 text-[12px] text-ink-2 leading-relaxed">{c.capability}</p>
-              <div className="flex flex-wrap gap-1.5 mt-3">
-                {c.forms.map((f) => (
-                  <span key={f} className="text-[10.5px] font-semibold text-ink-2 bg-tint border border-border-lt rounded-full px-2.5 py-1">
-                    {f}
-                  </span>
-                ))}
-                <span className="text-[10.5px] font-semibold text-navy bg-[#EAF1F9] border border-border rounded-full px-2.5 py-1">
-                  {fundingLabel(c)}
-                </span>
+      {loadError ? <Note danger>{loadError}</Note> : null}
+
+      {cards.length === 0 ? (
+        <div className="bg-white border border-border-lt rounded-2xl shadow-sm p-8 text-center mb-5">
+          <p className="m-0 text-ink-2 text-[12.5px]">No cards have been issued on this account yet.</p>
+        </div>
+      ) : (
+        <div className="grid gap-5 sm:grid-cols-2 mb-5">
+          {cards.map((c) => (
+            <div key={c.id} className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
+              <div className="p-4.5 sm:p-5">
+                <FlippableCard c={c} holder={store.user.name} />
               </div>
-
-              {c.funding === "credit" && c.creditLimit != null && c.outstanding != null ? (
-                <div className="mt-4 pt-4 border-t border-border-lt">
-                  <div className="flex items-center justify-between text-[11px] text-ink-2 mb-1.5">
-                    <span>Outstanding {formatCode(c.outstanding, c.currency)}</span>
-                    <span>Limit {formatCode(c.creditLimit, c.currency)}</span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-tint overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-navy-lt to-navy"
-                      style={{ width: `${Math.min(100, (c.outstanding / c.creditLimit) * 100)}%` }}
-                    />
-                  </div>
-                  <p className="m-0 mt-1.5 text-[11px] text-pos font-semibold">
-                    {formatCode(c.creditLimit - c.outstanding, c.currency)} available
-                  </p>
+              <div className="px-4.5 sm:px-5 pb-4.5 sm:pb-5">
+                <p className="m-0 text-[12px] text-ink-2 leading-relaxed">{c.capability}</p>
+                <div className="flex flex-wrap gap-1.5 mt-3">
+                  {c.forms.map((f) => (
+                    <span key={f} className="text-[10.5px] font-semibold text-ink-2 bg-tint border border-border-lt rounded-full px-2.5 py-1">
+                      {f}
+                    </span>
+                  ))}
+                  <span className="text-[10.5px] font-semibold text-navy bg-[#EAF1F9] border border-border rounded-full px-2.5 py-1">
+                    {fundingLabel(c)}
+                  </span>
                 </div>
-              ) : null}
+
+                {c.funding === "credit" && c.creditLimit != null && c.outstanding != null ? (
+                  <div className="mt-4 pt-4 border-t border-border-lt">
+                    <div className="flex items-center justify-between text-[11px] text-ink-2 mb-1.5">
+                      <span>Outstanding {formatCode(c.outstanding, c.currency)}</span>
+                      <span>Limit {formatCode(c.creditLimit, c.currency)}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-tint overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-navy-lt to-navy"
+                        style={{ width: `${Math.min(100, (c.outstanding / c.creditLimit) * 100)}%` }}
+                      />
+                    </div>
+                    <p className="m-0 mt-1.5 text-[11px] text-pos font-semibold">
+                      {formatCode(c.creditLimit - c.outstanding, c.currency)} available
+                    </p>
+                  </div>
+                ) : null}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
         <div className="flex items-center gap-3 px-4.5 sm:px-5 py-4 border-b border-border-lt">

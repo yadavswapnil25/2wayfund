@@ -127,6 +127,28 @@ export async function getApplication(ref: string): Promise<Omit<Application, "ky
   return toApplication(dto);
 }
 
+/** Recovers "your" eKYC record from the public eKYC page by Customer ID
+ * — for a customer who has an account but has lost the emailed link to
+ * their application. Two-step, OTP-gated, like every other sensitive
+ * lookup in this app: initiateEkycAccess() emails a one-time code;
+ * confirmEkycAccess() only returns the application once that code comes
+ * back. */
+export async function initiateEkycAccess(customerId: string): Promise<void> {
+  await apiFetch<null>("/ekyc/lookup", {
+    method: "POST",
+    body: JSON.stringify({ customer_id: customerId }),
+  });
+}
+
+export async function confirmEkycAccess(customerId: string, otp: string): Promise<Omit<Application, "kyc">> {
+  const dto = await apiFetch<ApplicationDto>("/ekyc/verify", {
+    method: "POST",
+    body: JSON.stringify({ customer_id: customerId, otp }),
+  });
+
+  return toApplication(dto);
+}
+
 export interface ApplicationListMeta {
   currentPage: number;
   perPage: number;

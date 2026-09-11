@@ -1,13 +1,15 @@
-import { useState } from "react";
-import { History, User, UserPlus, Users } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { UserPlus } from "lucide-react";
 import { PageHead } from "../../components/ui/Flow";
 import { Field, FormActions, FormGrid, Select, TextArea, TextInput } from "../../components/ui/Field";
 import { Btn } from "../../components/ui/Button";
 import { Chip, Note } from "../../components/ui/Misc";
-import { Tag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
-import type { Nominee } from "../../types/data";
-import { ageOn, stamp, todayIso } from "../../lib/dates";
+import type { Nominee, NomineeAuditEntry } from "../../types/data";
+import { ageOn, todayIso } from "../../lib/dates";
+import { confirmNominee, deleteNominee, initiateNominee, listNomineeAudit, listNominees } from "../../services/nomineeService";
+import { ApiError } from "../../services/apiClient";
+import { NomineeDirectory, NomineeHistory } from "./NomineeDirectoryViews";
 
 function isMinorDob(dob: string): boolean {
   if (!dob || !/^\d{4}-\d{2}-\d{2}$/.test(dob)) return false;
@@ -15,9 +17,42 @@ function isMinorDob(dob: string): boolean {
   return ageOn(dob, todayIso()) < 18;
 }
 
+/** The envelope's own message is generic — the useful, specific reason is
+ * nested under the offending field instead (matches BeneficiariesPage,
+ * ExchangePage). */
+function firstErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    const firstFieldMessage = err.fieldErrors ? Object.values(err.fieldErrors)[0]?.[0] : undefined;
+    return firstFieldMessage ?? err.message;
+  }
+  return fallback;
+}
+
+function applyFieldErrors(err: unknown, setErr: (id: string, msg: string | null) => void): boolean {
+  if (!(err instanceof ApiError) || !err.fieldErrors) return false;
+  const map: Record<string, string> = {
+    name: "nf-name",
+    address: "nf-address",
+    dob: "nf-dob",
+    guardian_name: "nf-gname",
+    guardian_relationship: "nf-grel",
+    guardian_address: "nf-gaddress",
+  };
+  let applied = false;
+  for (const [field, id] of Object.entries(map)) {
+    const message = err.fieldErrors[field]?.[0];
+    if (message) {
+      setErr(id, message);
+      applied = true;
+    }
+  }
+  return applied;
+}
+
 export function NomineesPage() {
-  const { store, setStore } = useApp();
-  const existing = store.nominees[0] ?? null;
+  const { store, session } = useApp();
+  const [nominees, setNominees] = useState<Nominee[]>(store.nominees);
+  const [nomineeAudit, setNomineeAudit] = useState<NomineeAuditEntry[]>(store.nomineeAudit);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -28,14 +63,35 @@ export function NomineesPage() {
   const [guardianRelationship, setGuardianRelationship] = useState("");
   const [guardianAddress, setGuardianAddress] = useState("");
   const [errors, setErrors] = useState<Record<string, string | null>>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [pending, setPending] = useState<Nominee | null>(null);
-  const [otp, setOtp] = useState("");
   const [otpInput, setOtpInput] = useState("");
   const [otpError, setOtpError] = useState<string | null>(null);
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
 
   const minor = isMinorDob(dob);
-  const blocked = store.nominees.length > 0 && !editingId;
+  const blocked = nominees.length > 0 && !editingId;
+
+  const refresh = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!session.token) return;
+      try {
+        const [realNominees, realAudit] = await Promise.all([listNominees(session.token, signal), listNomineeAudit(session.token, signal)]);
+        setNominees(realNominees);
+        setNomineeAudit(realAudit);
+      } catch {
+        // Best-effort — the seed/last-known data stays displayed.
+      }
+    },
+    [session.token],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void refresh(controller.signal);
+    return () => controller.abort();
+  }, [refresh]);
 
   function setErr(id: string, msg: string | null) {
     setErrors((e) => ({ ...e, [id]: msg }));
@@ -43,85 +99,136 @@ export function NomineesPage() {
 
   function clearForm() {
     setEditingId(null);
-    setName(""); setRelationship(store.nomineeRelationships[0]); setDob(""); setAddress("");
-    setGuardianName(""); setGuardianRelationship(""); setGuardianAddress("");
+    setName("");
+    setRelationship(store.nomineeRelationships[0]);
+    setDob("");
+    setAddress("");
+    setGuardianName("");
+    setGuardianRelationship("");
+    setGuardianAddress("");
     setErrors({});
+    setFormError(null);
     setPending(null);
-    setOtp(""); setOtpInput(""); setOtpError(null);
+    setOtpInput("");
+    setOtpError(null);
   }
 
   function startEdit(nm: Nominee) {
     setEditingId(nm.id);
-    setName(nm.name); setRelationship(nm.relationship); setDob(nm.dob); setAddress(nm.address);
-    setGuardianName(nm.guardianName); setGuardianRelationship(nm.guardianRelationship); setGuardianAddress(nm.guardianAddress);
+    setName(nm.name);
+    setRelationship(nm.relationship);
+    setDob(nm.dob);
+    setAddress(nm.address);
+    setGuardianName(nm.guardianName);
+    setGuardianRelationship(nm.guardianRelationship);
+    setGuardianAddress(nm.guardianAddress);
     setErrors({});
+    setFormError(null);
     setPending(null);
   }
 
-  function removeNominee(id: string) {
-    setStore((s) => ({
-      ...s,
-      nominees: s.nominees.filter((n) => n.id !== id),
-      nomineeAudit: [{ at: stamp(), action: `Nomination cancelled — ${s.nominees.find((n) => n.id === id)?.name} (${s.nominees.find((n) => n.id === id)?.relationship})` }, ...s.nomineeAudit],
-    }));
-    if (editingId === id) clearForm();
+  async function removeNominee(id: string) {
+    if (!session.token || submitting) return;
+    setSubmitting(true);
+    try {
+      await deleteNominee(id, session.token);
+      await refresh();
+      if (editingId === id) clearForm();
+    } catch (err) {
+      setFormError(firstErrorMessage(err, "Could not remove that nominee. Please try again."));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function validate(): boolean {
     let ok = true;
-    if (!name.trim()) { setErr("nf-name", "Enter the nominee’s name."); ok = false; } else setErr("nf-name", null);
-    if (!address.trim()) { setErr("nf-address", "Enter the nominee’s address."); ok = false; } else setErr("nf-address", null);
+    if (!name.trim()) {
+      setErr("nf-name", "Enter the nominee’s name.");
+      ok = false;
+    } else setErr("nf-name", null);
+    if (!address.trim()) {
+      setErr("nf-address", "Enter the nominee’s address.");
+      ok = false;
+    } else setErr("nf-address", null);
 
-    if (!dob) { setErr("nf-dob", "Enter a date of birth."); ok = false; }
-    else if (!/^\d{4}-\d{2}-\d{2}$/.test(dob)) { setErr("nf-dob", "Enter a valid date."); ok = false; }
-    else if (dob > todayIso()) { setErr("nf-dob", "Date of birth cannot be in the future."); ok = false; }
-    else setErr("nf-dob", null);
+    if (!dob) {
+      setErr("nf-dob", "Enter a date of birth.");
+      ok = false;
+    } else if (!/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+      setErr("nf-dob", "Enter a valid date.");
+      ok = false;
+    } else if (dob > todayIso()) {
+      setErr("nf-dob", "Date of birth cannot be in the future.");
+      ok = false;
+    } else setErr("nf-dob", null);
 
     if (isMinorDob(dob)) {
-      if (!guardianName.trim()) { setErr("nf-gname", "A guardian must be named for a nominee under 18."); ok = false; } else setErr("nf-gname", null);
-      if (!guardianRelationship.trim()) { setErr("nf-grel", "State the guardian’s relationship to the nominee."); ok = false; } else setErr("nf-grel", null);
-      if (!guardianAddress.trim()) { setErr("nf-gaddress", "Enter the guardian’s address."); ok = false; } else setErr("nf-gaddress", null);
+      if (!guardianName.trim()) {
+        setErr("nf-gname", "A guardian must be named for a nominee under 18.");
+        ok = false;
+      } else setErr("nf-gname", null);
+      if (!guardianRelationship.trim()) {
+        setErr("nf-grel", "State the guardian’s relationship to the nominee.");
+        ok = false;
+      } else setErr("nf-grel", null);
+      if (!guardianAddress.trim()) {
+        setErr("nf-gaddress", "Enter the guardian’s address.");
+        ok = false;
+      } else setErr("nf-gaddress", null);
     }
 
     return ok;
   }
 
-  function submit() {
-    if (!validate()) return;
-    const rec: Nominee = {
-      id: editingId || "nom" + (store.nominees.length + 1 + Math.floor(Math.random() * 1000)),
-      name: name.trim(),
-      relationship,
-      dob,
-      address: address.trim(),
-      guardianName: minor ? guardianName.trim() : "",
-      guardianRelationship: minor ? guardianRelationship.trim() : "",
-      guardianAddress: minor ? guardianAddress.trim() : "",
-      registered: stamp(),
-    };
-    setPending(rec);
-    setOtp(String(Math.floor(100000 + Math.random() * 900000)));
-    setOtpInput("");
-    setOtpError(null);
+  async function submit() {
+    if (submitting || !validate() || !session.token) return;
+    setFormError(null);
+    setSubmitting(true);
+    try {
+      const result = await initiateNominee(
+        {
+          name: name.trim(),
+          relationship,
+          dob,
+          address: address.trim(),
+          guardianName: minor ? guardianName.trim() : undefined,
+          guardianRelationship: minor ? guardianRelationship.trim() : undefined,
+          guardianAddress: minor ? guardianAddress.trim() : undefined,
+        },
+        session.token,
+      );
+      setPending(result);
+      setOtpInput("");
+      setOtpError(null);
+    } catch (err) {
+      if (!applyFieldErrors(err, setErr)) {
+        setFormError(firstErrorMessage(err, "Could not register this nominee. Please try again."));
+      }
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  function confirmOtp() {
-    if (otpInput.trim() !== otp) {
-      setOtpError("Incorrect one-time password. The code is shown above.");
+  async function confirmOtp() {
+    if (submitting || !pending || !session.token) return;
+    if (!/^\d{6}$/.test(otpInput)) {
+      setOtpError("Enter the 6-digit code from your email.");
       return;
     }
-    if (!pending) return;
-    const wasEditing = Boolean(editingId);
-    setStore((s) => ({
-      ...s,
-      nominees: wasEditing ? s.nominees.map((n) => (n.id === pending.id ? pending : n)) : [pending],
-      nomineeAudit: [
-        { at: stamp(), action: wasEditing ? `Nomination updated — ${pending.name} (${pending.relationship})` : `Nominee registered — ${pending.name} (${pending.relationship})${minor ? `, guardian ${pending.guardianName}` : ""}` },
-        ...s.nomineeAudit,
-      ],
-    }));
-    setConfirmMsg(`${pending.name} is now registered as your nominee.`);
-    clearForm();
+
+    setOtpError(null);
+    setSubmitting(true);
+    try {
+      const result = await confirmNominee(pending.id, otpInput, session.token);
+      await refresh();
+      setConfirmMsg(`${result.name} is now registered as your nominee.`);
+      clearForm();
+    } catch (err) {
+      setOtpError(firstErrorMessage(err, "Could not confirm that code. Please try again."));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -148,6 +255,7 @@ export function NomineesPage() {
             <p className="mt-0 text-xs text-ink-2 mb-3">
               Register the person who will receive your account balance. Only one nominee can be registered on this relationship at a time.
             </p>
+            {formError ? <Note danger>{formError}</Note> : null}
             {confirmMsg ? (
               <div className="bg-[#F0F8F3] border border-[#A8D4BB] rounded-xl p-4 mb-3">
                 <h3 className="text-pos font-bold mb-2 text-sm">Nominee registered</h3>
@@ -163,7 +271,7 @@ export function NomineesPage() {
                   someone else.
                 </p>
               </div>
-            ) : (
+            ) : !pending ? (
               <>
                 <p className="text-[10.5px] uppercase text-ink-2 font-semibold mb-2">Quick relationship presets</p>
                 <div className="flex flex-wrap gap-2 mb-4">
@@ -189,7 +297,13 @@ export function NomineesPage() {
                     <TextInput type="date" value={dob} max={todayIso()} onChange={(e) => setDob(e.target.value)} hasError={!!errors["nf-dob"]} />
                   </Field>
                   <Field label="Nominee address" required wide error={errors["nf-address"]}>
-                    <TextArea value={address} onChange={(e) => setAddress(e.target.value)} maxLength={220} style={{ minHeight: 66 }} hasError={!!errors["nf-address"]} />
+                    <TextArea
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      maxLength={220}
+                      style={{ minHeight: 66 }}
+                      hasError={!!errors["nf-address"]}
+                    />
                   </Field>
 
                   {minor ? (
@@ -198,50 +312,67 @@ export function NomineesPage() {
                         <p className="m-0 text-xs text-ink-2 font-semibold">Guardian — required for a nominee under 18</p>
                       </div>
                       <Field label="Guardian name" required error={errors["nf-gname"]}>
-                        <TextInput value={guardianName} onChange={(e) => setGuardianName(e.target.value)} maxLength={70} hasError={!!errors["nf-gname"]} />
+                        <TextInput
+                          value={guardianName}
+                          onChange={(e) => setGuardianName(e.target.value)}
+                          maxLength={70}
+                          hasError={!!errors["nf-gname"]}
+                        />
                       </Field>
                       <Field label="Guardian relationship to nominee" required error={errors["nf-grel"]}>
-                        <TextInput value={guardianRelationship} onChange={(e) => setGuardianRelationship(e.target.value)} maxLength={40} hasError={!!errors["nf-grel"]} />
+                        <TextInput
+                          value={guardianRelationship}
+                          onChange={(e) => setGuardianRelationship(e.target.value)}
+                          maxLength={40}
+                          hasError={!!errors["nf-grel"]}
+                        />
                       </Field>
                       <Field label="Guardian address" required wide error={errors["nf-gaddress"]}>
-                        <TextArea value={guardianAddress} onChange={(e) => setGuardianAddress(e.target.value)} maxLength={220} style={{ minHeight: 66 }} hasError={!!errors["nf-gaddress"]} />
+                        <TextArea
+                          value={guardianAddress}
+                          onChange={(e) => setGuardianAddress(e.target.value)}
+                          maxLength={220}
+                          style={{ minHeight: 66 }}
+                          hasError={!!errors["nf-gaddress"]}
+                        />
                       </Field>
                     </>
                   ) : null}
 
                   <FormActions className="flex-col items-stretch">
-                    <Btn variant="block" onClick={submit}>
-                      {editingId ? "Save Changes" : "Add Nominee"}
+                    <Btn variant="block" onClick={() => void submit()} disabled={submitting}>
+                      {submitting ? "Sending code…" : editingId ? "Save Changes" : "Add Nominee"}
                     </Btn>
                     {editingId ? <Btn onClick={clearForm}>Cancel edit</Btn> : null}
                     <Btn onClick={clearForm}>Clear</Btn>
-                    <Note className="!m-0">Nothing here leaves your browser.</Note>
                   </FormActions>
                 </FormGrid>
               </>
-            )}
+            ) : null}
 
             {pending ? (
               <div className="bg-tint border border-border-lt rounded-xl p-4 mt-4 text-[12.5px]">
-                <span className="block font-bold text-navy mb-2">Confirm with one-time password — displayed, never sent</span>
+                <span className="block font-bold text-navy mb-2">Enter the one-time code we emailed you</span>
                 <div>
-                  {editingId ? "Update " : "Register "} {pending.name} to confirm.
-                </div>
-                <div className="inline-block font-num text-[26px] font-bold tracking-widest text-navy bg-white border border-border rounded-lg px-4 py-2 my-1.5">
-                  {otp}
+                  {editingId ? "Updating" : "Registering"} {pending.name} is a protected action — check the email on file for this account. The
+                  code expires 10 minutes after it's sent, and can only be used once.
                 </div>
                 <div className="flex gap-2.5 flex-wrap items-center mt-2.5">
                   <input
                     value={otpInput}
-                    onChange={(e) => setOtpInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && confirmOtp()}
+                    onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    onKeyDown={(e) => e.key === "Enter" && void confirmOtp()}
+                    inputMode="numeric"
+                    autoComplete="off"
                     className="w-[140px] font-num text-[15px] px-2.5 py-2 border border-border rounded-lg"
-                    aria-label="One-time password"
+                    aria-label="One-time code"
                   />
-                  <Btn variant="approve" onClick={confirmOtp}>
-                    Confirm
+                  <Btn variant="approve" onClick={() => void confirmOtp()} disabled={submitting}>
+                    {submitting ? "Confirming…" : "Confirm"}
                   </Btn>
-                  <Btn onClick={() => { setPending(null); setOtp(""); }}>Cancel</Btn>
+                  <Btn onClick={clearForm} disabled={submitting}>
+                    Cancel
+                  </Btn>
                 </div>
                 {otpError ? <div className="text-neg text-xs font-semibold mt-2.5">{otpError}</div> : null}
               </div>
@@ -249,123 +380,10 @@ export function NomineesPage() {
           </div>
         </div>
 
-        {/* Directory */}
-        <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between gap-3 flex-wrap px-4.5 sm:px-5 py-4 border-b border-border-lt">
-            <div className="flex items-center gap-3">
-              <span className="flex-none w-10 h-10 rounded-xl bg-[#EAF1F9] text-navy flex items-center justify-center">
-                <Users size={17} />
-              </span>
-              <div>
-                <h3 className="m-0 text-[14.5px] font-bold text-navy">Registered Nominee Directory</h3>
-                <p className="m-0 mt-0.5 text-[11px] text-ink-2">
-                  {existing ? `${existing.name} is registered as your nominee` : "No nominee registered on your NetBanking profile"}
-                </p>
-              </div>
-            </div>
-            <Tag variant="completed">
-              {store.nominees.length} {store.nominees.length === 1 ? "Nominee" : "Nominees"}
-            </Tag>
-          </div>
-
-          {store.nominees.length === 0 ? (
-            <p className="text-center py-10 text-ink-2 text-[12.5px]">No nominee registered. Add one using the form.</p>
-          ) : (
-            <div className="divide-y divide-border-lt">
-              {store.nominees.map((nm) => {
-                const nmMinor = isMinorDob(nm.dob);
-                const isOpen = editingId === nm.id;
-                return (
-                  <div
-                    key={nm.id}
-                    className={`flex items-start gap-3 px-4.5 sm:px-5 py-3.5 transition-colors flex-wrap sm:flex-nowrap ${isOpen ? "bg-[#F4F8FC]" : "hover:bg-tint/70"}`}
-                  >
-                    <span className="flex-none w-9 h-9 rounded-full bg-[#EAF1F9] text-navy flex items-center justify-center">
-                      <User size={16} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <strong className="text-[13px] text-ink truncate">{nm.name}</strong>
-                        <Tag variant="processing">{nm.relationship}</Tag>
-                        {nmMinor ? <Tag variant="pending">Minor</Tag> : null}
-                      </div>
-                      <p className="m-0 mt-0.5 text-[11px] text-ink-2 truncate">
-                        DOB: {nm.dob} · Age {ageOn(nm.dob, todayIso())}
-                      </p>
-                      {nmMinor ? (
-                        <p className="m-0 mt-0.5 text-[11px] text-ink-2 truncate">
-                          Guardian: {nm.guardianName || "—"}
-                          {nm.guardianRelationship ? ` (${nm.guardianRelationship})` : ""}
-                        </p>
-                      ) : null}
-                      <p className="m-0 mt-0.5 text-[11px] text-ink-2 truncate">{nm.address}</p>
-                    </div>
-                    <div className="flex-none flex items-center gap-2 mt-2 sm:mt-0 w-full sm:w-auto justify-end">
-                      <button
-                        type="button"
-                        onClick={() => startEdit(nm)}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-navy-dk bg-gradient-to-b from-navy-lt to-navy px-3.5 py-1.5 text-xs font-semibold text-white hover:brightness-110"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeNominee(nm.id)}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-semibold text-ink hover:bg-tint"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          <div className="px-4.5 sm:px-5 py-3.5 border-t border-border-lt">
-            <Note>
-              A nominee under 18 cannot receive funds directly, so a guardian must be named at registration — the guardian holds the entitlement
-              until the nominee reaches majority.
-            </Note>
-          </div>
-        </div>
+        <NomineeDirectory nominees={nominees} editingId={editingId} submitting={submitting} onEdit={startEdit} onRemove={(id) => void removeNominee(id)} />
       </div>
 
-      {/* History */}
-      <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between gap-3 flex-wrap px-4.5 sm:px-5 py-4 border-b border-border-lt">
-          <div className="flex items-center gap-3">
-            <span className="flex-none w-10 h-10 rounded-xl bg-tint text-ink-2 flex items-center justify-center">
-              <History size={17} />
-            </span>
-            <h3 className="m-0 text-[14.5px] font-bold text-navy">Nomination History</h3>
-          </div>
-          <span className="text-[11px] text-ink-2">
-            {store.nomineeAudit.length} {store.nomineeAudit.length === 1 ? "entry" : "entries"}
-          </span>
-        </div>
-
-        {store.nomineeAudit.length === 0 ? (
-          <p className="text-center py-10 text-ink-2 text-[12.5px]">No nomination activity yet.</p>
-        ) : (
-          <div className="divide-y divide-border-lt">
-            {store.nomineeAudit.map((entry, i) => (
-              <div key={i} className="flex items-center gap-3 px-4.5 sm:px-5 py-2.5 text-[12.5px]">
-                <span className="w-1.5 h-1.5 rounded-full bg-border flex-none" />
-                <span className="text-ink-2 font-num flex-none">{entry.at}</span>
-                <span className="text-ink">{entry.action}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="px-4.5 sm:px-5 py-3.5 border-t border-border-lt">
-          <Note>
-            Every registration, variation and cancellation is recorded. A nomination change is never actioned over the telephone, and nobody from
-            the institution will ask you for a password or one-time code to make one on your behalf.
-          </Note>
-        </div>
-      </div>
+      <NomineeHistory entries={nomineeAudit} />
     </>
   );
 }

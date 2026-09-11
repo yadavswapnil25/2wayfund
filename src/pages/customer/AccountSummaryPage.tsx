@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Copy, Check, KeyRound, Send, UserPlus, FileText, ChevronRight, Printer, LogOut, ArrowUpRight, ArrowDownRight, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, Copy, Check, KeyRound, Send, UserPlus, FileText, ChevronRight, Printer, LogOut, ArrowUpRight, ArrowDownRight, ShieldCheck, ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { StatusTag } from "../../components/ui/Tag";
@@ -46,6 +46,7 @@ export function AccountSummaryPage() {
   const [transactions, setTransactions] = useState<Transaction[]>(store.transactions);
   const navigate = useNavigate();
   const { user } = store;
+  const kycVerified = user.kycStatus === "Verified";
 
   // The seed customer renders immediately (no blank/loading state on the
   // page you land on right after signing in) and is then quietly replaced
@@ -140,8 +141,12 @@ export function AccountSummaryPage() {
                 <p className="m-0 text-[11px] text-white/60">Welcome back</p>
                 <p className="m-0 text-[14.5px] font-bold truncate">{user.name}</p>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                  <span className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase tracking-wide bg-white/15 text-white border border-white/20 px-1.75 py-0.5 rounded-full">
-                    <ShieldCheck size={10} /> KYC Verified
+                  <span
+                    className={`inline-flex items-center gap-1 text-[9.5px] font-bold uppercase tracking-wide border px-1.75 py-0.5 rounded-full ${
+                      kycVerified ? "bg-white/15 text-white border-white/20" : "bg-gold/20 text-gold border-gold/30"
+                    }`}
+                  >
+                    {kycVerified ? <ShieldCheck size={10} /> : <ShieldAlert size={10} />} {kycVerified ? "KYC Verified" : "KYC Pending"}
                   </span>
                   <span className="text-[9.5px] font-bold uppercase tracking-wide bg-white/10 text-white/80 border border-white/15 px-1.75 py-0.5 rounded-full">
                     {user.accountTier}

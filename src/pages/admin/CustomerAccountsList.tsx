@@ -10,6 +10,7 @@ import { formatStamp } from "../../lib/dates";
 import { listCustomerAccounts, type AccountListMeta, type CustomerAccountDto } from "../../services/adminAccountService";
 import { ApiError } from "../../services/apiClient";
 import { AddFundsPanel } from "./AddFundsPanel";
+import { CardsPanel } from "./CardsPanel";
 
 /** Every customer account — however it was provisioned (an approved
  * application or the "Open Account" tool) — with search and paging, the
@@ -191,6 +192,7 @@ export function CustomerAccountsList({ refreshSignal = 0 }: { refreshSignal?: nu
                       ))}
                     </div>
                     {session.token ? <AddFundsPanel userId={a.id} token={session.token} /> : null}
+                    {session.token ? <CardsPanel userId={a.id} token={session.token} /> : null}
                   </div>
                 ) : null}
               </div>

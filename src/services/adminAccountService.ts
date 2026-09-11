@@ -1,5 +1,6 @@
 import { apiFetch } from "./apiClient";
-import type { CurrencyCode } from "../types/data";
+import { mapCard, type CardDto } from "./cardService";
+import type { Card, CurrencyCode } from "../types/data";
 
 /** Everything the Compliance Console's "Open Account" tool collects to
  * provision a customer directly — no application, no self-service eKYC.
@@ -194,4 +195,74 @@ export async function creditCustomerAccount(
   });
 
   return { currency: dto.balance.currency, newBalance: Number(dto.balance.amount) };
+}
+
+/** A card is provisioned and maintained by the institution — the
+ * Compliance Console's card management panel is the only place one is
+ * ever created, edited, or removed. Staff only, hence the token. */
+export interface AdminCardPayload {
+  type: "Debit" | "Credit";
+  last4: string;
+  expiry: string;
+  cvv: string;
+  forms: string[];
+  capability: string;
+  funding: "ledger" | "credit" | "prepaid";
+  currency: CurrencyCode;
+  capPerTxn?: number;
+  capNote?: string;
+  creditLimit?: number;
+  outstanding?: number;
+  prepaid?: number;
+}
+
+function cardPayloadBody(payload: AdminCardPayload) {
+  return JSON.stringify({
+    type: payload.type,
+    last4: payload.last4,
+    expiry: payload.expiry,
+    cvv: payload.cvv,
+    forms: payload.forms,
+    capability: payload.capability,
+    funding: payload.funding,
+    currency: payload.currency,
+    cap_per_txn: payload.capPerTxn ?? null,
+    cap_note: payload.capNote || null,
+    credit_limit: payload.creditLimit ?? null,
+    outstanding: payload.outstanding ?? null,
+    prepaid: payload.prepaid ?? null,
+  });
+}
+
+export async function listCustomerCards(userId: number, token: string, signal?: AbortSignal): Promise<Card[]> {
+  const dtos = await apiFetch<CardDto[]>(`/admin/accounts/${userId}/cards`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal,
+  });
+  return dtos.map(mapCard);
+}
+
+export async function createCustomerCard(userId: number, payload: AdminCardPayload, token: string): Promise<Card> {
+  const dto = await apiFetch<CardDto>(`/admin/accounts/${userId}/cards`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: cardPayloadBody(payload),
+  });
+  return mapCard(dto);
+}
+
+export async function updateCustomerCard(userId: number, cardId: string, payload: AdminCardPayload, token: string): Promise<Card> {
+  const dto = await apiFetch<CardDto>(`/admin/accounts/${userId}/cards/${cardId}`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}` },
+    body: cardPayloadBody(payload),
+  });
+  return mapCard(dto);
+}
+
+export async function deleteCustomerCard(userId: number, cardId: string, token: string): Promise<void> {
+  await apiFetch<null>(`/admin/accounts/${userId}/cards/${cardId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }
