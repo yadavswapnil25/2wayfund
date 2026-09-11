@@ -7,6 +7,60 @@ const LINK_BASE = "px-3.5 py-2 text-[12.5px] font-semibold whitespace-nowrap no-
 const LINK_ACTIVE = "bg-gradient-to-b from-[#D9AF57] to-gold text-navy-dk font-bold";
 const LINK_INACTIVE = "text-white/85 hover:bg-white/10 hover:text-white";
 
+const SIGN_IN_OPTIONS = [
+  { label: "Internet Banking", path: "/login" },
+  { label: "Corporate Internet Banking", path: "/corporate-login" },
+];
+
+function SignInMenu({ onNavigate }: { onNavigate: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="inline-flex items-center gap-1 px-4 py-2 rounded-[5px] text-[12.5px] font-bold bg-transparent text-white border border-white/50"
+      >
+        Sign In
+        <ChevronDown size={13} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 top-[calc(100%+12px)] w-[240px] bg-white border border-border-lt rounded-lg shadow-lg p-3 flex flex-col gap-2.5 z-40 before:content-[''] before:absolute before:-top-2 before:right-5 before:w-4 before:h-4 before:bg-white before:border-l before:border-t before:border-border-lt before:rotate-45"
+        >
+          {SIGN_IN_OPTIONS.map((opt) => (
+            <Link
+              key={opt.label}
+              to={opt.path}
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onNavigate();
+              }}
+              className="block text-center px-4 py-2.5 rounded-md border border-[#3B6EA5] text-[#2F5C93] text-[12.5px] font-semibold no-underline hover:bg-[#EAF1F9]"
+            >
+              {opt.label}
+            </Link>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function NavDropdown({ group, active, onNavigate }: { group: PublicNavGroup; active: boolean; onNavigate: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -92,8 +146,12 @@ export function PubNav() {
         </button>
 
         <div className="flex gap-2 flex-wrap">
-          <Link to="/login" className="inline-block px-4 py-2 rounded-[5px] text-[12.5px] font-bold no-underline bg-transparent text-white border border-white/50">
-            Sign In
+          <SignInMenu onNavigate={() => setMobileOpen(false)} />
+          <Link
+            to="/register-account"
+            className="inline-block px-4 py-2 rounded-[5px] text-[12.5px] font-bold no-underline bg-transparent text-white border border-white/50"
+          >
+            Register for Netbanking
           </Link>
           <Link
             to="/open-account"

@@ -30,6 +30,7 @@ export interface User {
   pinStatus: string;
   kycStatus: string;
   lastLogin: string;
+  hasPhoto: boolean;
 }
 
 export interface Balance {

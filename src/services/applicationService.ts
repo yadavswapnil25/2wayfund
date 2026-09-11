@@ -127,6 +127,69 @@ export async function getApplication(ref: string): Promise<Omit<Application, "ky
   return toApplication(dto);
 }
 
+export interface ApplicationListMeta {
+  currentPage: number;
+  perPage: number;
+  total: number;
+  lastPage: number;
+}
+
+export interface ApplicationListResult {
+  items: Omit<Application, "kyc">[];
+  meta: ApplicationListMeta;
+}
+
+interface ApplicationListDto {
+  items: ApplicationDto[];
+  meta: { current_page: number; per_page: number; total: number; last_page: number };
+}
+
+export interface ApplicationListFilters {
+  email?: string;
+  page?: number;
+}
+
+/** The Compliance Console's application queue — staff-only on the
+ * backend (see the "admin" route middleware), hence the bearer token. The
+ * optional signal lets the caller cancel an in-flight request (React
+ * StrictMode's dev-only double-mount, or the user navigating away fast). */
+export async function listApplications(
+  token: string,
+  filters: ApplicationListFilters = {},
+  signal?: AbortSignal
+): Promise<ApplicationListResult> {
+  const params = new URLSearchParams();
+  if (filters.email) params.set("email", filters.email);
+  if (filters.page) params.set("page", String(filters.page));
+  const query = params.toString();
+
+  const result = await apiFetch<ApplicationListDto>(`/applications${query ? `?${query}` : ""}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal,
+  });
+
+  return {
+    items: result.items.map(toApplication),
+    meta: {
+      currentPage: result.meta.current_page,
+      perPage: result.meta.per_page,
+      total: result.meta.total,
+      lastPage: result.meta.last_page,
+    },
+  };
+}
+
+/** Removes an application from the queue entirely — staff-only, same as
+ * the listing above. Does not affect any customer account it may already
+ * have provisioned (App\Services\ApplicationService::delete on the
+ * backend only nulls the link, never cascades into the account). */
+export async function deleteApplication(ref: string, token: string): Promise<void> {
+  await apiFetch<null>(`/applications/${encodeURIComponent(ref)}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export async function submitApplication(payload: OpenAccountPayload): Promise<Omit<Application, "kyc">> {
   const dto = await apiFetch<ApplicationDto>("/applications", {
     method: "POST",

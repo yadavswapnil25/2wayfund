@@ -1,5 +1,5 @@
 import { ArrowDownRight, ArrowUpRight, ChevronRight, Download, Printer, Send } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageHead } from "../../components/ui/Flow";
 import { Note } from "../../components/ui/Misc";
@@ -7,16 +7,43 @@ import { StatusTag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
 import { displayMoney, formatCode } from "../../lib/format";
 import { isoToDisplay, today } from "../../lib/dates";
+import { getTransactions } from "../../services/meService";
+import { ApiError } from "../../services/apiClient";
+import type { Transaction } from "../../types/data";
 
 export function DomesticPage() {
-  const { store, balancesHidden } = useApp();
+  const { store, session, balancesHidden } = useApp();
+  const [transactions, setTransactions] = useState<Transaction[]>(store.transactions);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Seed data renders immediately, then is quietly replaced by the real
+  // transaction history once the backend responds — same pattern as the
+  // Account & Passbook page's Recent Activity.
+  useEffect(() => {
+    if (!session.token) return;
+    const controller = new AbortController();
+    const token = session.token;
+
+    (async () => {
+      try {
+        const txs = await getTransactions(token, controller.signal);
+        setTransactions(txs);
+        setLoadError(null);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setLoadError(err instanceof ApiError ? err.message : "Could not load your live transaction history — showing the last known data.");
+      }
+    })();
+
+    return () => controller.abort();
+  }, [session.token]);
 
   const rows = useMemo(() => {
-    return store.transactions
+    return transactions
       .filter((t) => t.corridor === "Domestic")
       .slice()
       .sort((a, b) => (a.valueIso === b.valueIso ? 0 : a.valueIso < b.valueIso ? 1 : -1));
-  }, [store.transactions]);
+  }, [transactions]);
 
   const totals = useMemo(() => {
     const live = rows.filter((t) => !t.reversed);
@@ -45,6 +72,12 @@ export function DomesticPage() {
 
   return (
     <>
+      {loadError ? (
+        <Note danger className="mb-3.5">
+          {loadError}
+        </Note>
+      ) : null}
+
       <PageHead
         title="Domestic Transactions"
         lede="Rupee settlement within India, routed by IFSC. No currency conversion applies and no cross-border commission is charged."

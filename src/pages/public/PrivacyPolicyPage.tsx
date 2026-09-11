@@ -40,12 +40,14 @@ export function PrivacyPolicyPage() {
     <>
       <PageHead title="Privacy Policy" lede="What this prototype actually collects: almost nothing." />
 
-      <Callout title="Client-only, with one exception" variant="info">
+      <Callout title="Client-only, with two exceptions" variant="info">
         <p>
           Nearly every page here makes no network requests — anything typed into a form lives only in a JavaScript variable in your
-          browser tab and is discarded on reload. The one exception is Open an Account: that form submits to a demonstration backend and
+          browser tab and is discarded on reload. The first exception is Open an Account: that form submits to a demonstration backend and
           the application record is stored in a database for this case study, so the compliance-review flow it feeds has something real
-          to work against. No payment is collected and no identity document is requested or stored.
+          to work against. The second is sign-in state itself — once you're signed in, that stays in the browser's session storage so a
+          reload doesn't sign you back out; it's still cleared the moment the tab closes. No payment is collected and no identity document
+          is requested or stored.
         </p>
       </Callout>
 

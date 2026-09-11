@@ -62,13 +62,13 @@ test("an approved applicant can set their password and log in with it", async ({
   expect(token).toMatch(/^[a-f0-9]{64}$/);
 
   const newPassword = "a-secure-e2e-password";
-  await page.goto(`/#/set-password?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`);
+  await page.goto(`/set-password?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`);
 
   await page.locator("#sp-password").fill(newPassword);
   await page.locator("#sp-confirm").fill(newPassword);
   await page.getByRole("button", { name: "Set password" }).click();
 
-  await expect(page.getByText("Your password is set")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Password Set" })).toBeVisible();
   await expect(page.getByText(email)).toBeVisible();
 
   const loginResponse = await request.post(`${API_BASE}/auth/login`, {
@@ -81,8 +81,8 @@ test("an approved applicant can set their password and log in with it", async ({
 });
 
 test("an incomplete activation link shows a helpful message instead of a broken form", async ({ page }) => {
-  await page.goto("/#/set-password");
+  await page.goto("/set-password");
 
-  await expect(page.getByText("This link is incomplete")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Link Incomplete" })).toBeVisible();
   await expect(page.locator("#sp-password")).toHaveCount(0);
 });

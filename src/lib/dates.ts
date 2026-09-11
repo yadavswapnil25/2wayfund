@@ -28,6 +28,16 @@ export function todayIso(): string {
   return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
 }
 
+/** Today's date, shifted back by `years` — used to express an age bound
+ * (e.g. "at least 18 years old") as a comparable ISO date, matching how
+ * the backend expresses the same bound (now()->subYears(n), 2wayfund-API
+ * app/Http/Requests/SubmitApplicationRequest.php). */
+export function isoYearsAgo(years: number): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - years);
+  return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+}
+
 export function isoToDisplay(iso: string | undefined | null): string {
   if (!iso) return "—";
   const p = iso.split("-");

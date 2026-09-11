@@ -7,7 +7,11 @@ import { Breadcrumbs, SessionBar } from "./Breadcrumbs";
 import { Sidenav } from "./Sidenav";
 import { Footer } from "./Footer";
 
-const AUTH_PATHS = ["/login", "/admin-login", "/denied"];
+// "/corporate-login" is deliberately not here — unlike the other auth
+// screens it's a wide two-column layout (form + informational panels), not
+// a narrow centered card, so it keeps the ordinary breadcrumb/full-width
+// treatment every other public page gets.
+const AUTH_PATHS = ["/login", "/admin-login", "/register-account", "/denied"];
 
 export function AppShell() {
   const { session } = useApp();

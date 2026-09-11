@@ -1,17 +1,20 @@
-import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppProvider, useApp } from "./state/AppContext";
 import { AppShell } from "./components/layout/AppShell";
 import { RouteGuard } from "./components/RouteGuard";
 import { landingFor } from "./lib/access";
 
 import { LoginPage } from "./pages/auth/LoginPage";
+import { CorporateLoginPage } from "./pages/auth/CorporateLoginPage";
 import { AdminLoginPage } from "./pages/auth/AdminLoginPage";
 import { DeniedPage } from "./pages/auth/DeniedPage";
 import { SetPasswordPage } from "./pages/auth/SetPasswordPage";
+import { RegisterAccountPage } from "./pages/auth/RegisterAccountPage";
 
 import { AccountSummaryPage } from "./pages/customer/AccountSummaryPage";
 import { TransferFundsPage } from "./pages/customer/TransferFundsPage";
 import { BeneficiariesPage } from "./pages/customer/BeneficiariesPage";
+import { BeneficiaryDirectoryPage } from "./pages/customer/BeneficiaryDirectoryPage";
 import { NomineesPage } from "./pages/customer/NomineesPage";
 import { PinSecurityPage } from "./pages/customer/PinSecurityPage";
 import { StatementsPage } from "./pages/customer/StatementsPage";
@@ -24,6 +27,8 @@ import { InternationalPage } from "./pages/customer/InternationalPage";
 
 import { ConsoleHomePage } from "./pages/admin/ConsoleHomePage";
 import { ComplianceConsolePage } from "./pages/admin/ComplianceConsolePage";
+import { OpenCustomerAccountPage } from "./pages/admin/OpenCustomerAccountPage";
+import { CustomerAccountsPage } from "./pages/admin/CustomerAccountsPage";
 import { MessagingPage } from "./pages/admin/MessagingPage";
 import { AdjustmentsPage } from "./pages/admin/AdjustmentsPage";
 import { CustomerDataPage } from "./pages/admin/CustomerDataPage";
@@ -55,13 +60,16 @@ function AppRoutes() {
     <Routes>
       <Route element={<AppShell />}>
         <Route path="/login" element={<RouteGuard><LoginPage /></RouteGuard>} />
+        <Route path="/corporate-login" element={<RouteGuard><CorporateLoginPage /></RouteGuard>} />
         <Route path="/admin-login" element={<RouteGuard><AdminLoginPage /></RouteGuard>} />
         <Route path="/set-password" element={<RouteGuard><SetPasswordPage /></RouteGuard>} />
+        <Route path="/register-account" element={<RouteGuard><RegisterAccountPage /></RouteGuard>} />
         <Route path="/denied" element={<RouteGuard><DeniedPage /></RouteGuard>} />
 
         <Route path="/" element={<RouteGuard><AccountSummaryPage /></RouteGuard>} />
         <Route path="/transfer" element={<RouteGuard><TransferFundsPage /></RouteGuard>} />
         <Route path="/beneficiaries" element={<RouteGuard><BeneficiariesPage /></RouteGuard>} />
+        <Route path="/beneficiaries-directory" element={<RouteGuard><BeneficiaryDirectoryPage /></RouteGuard>} />
         <Route path="/nominees" element={<RouteGuard><NomineesPage /></RouteGuard>} />
         <Route path="/receive" element={<RouteGuard><ReceivePage /></RouteGuard>} />
         <Route path="/domestic" element={<RouteGuard><DomesticPage /></RouteGuard>} />
@@ -74,6 +82,8 @@ function AppRoutes() {
 
         <Route path="/console" element={<RouteGuard><ConsoleHomePage /></RouteGuard>} />
         <Route path="/admin" element={<RouteGuard><ComplianceConsolePage /></RouteGuard>} />
+        <Route path="/open-customer-account" element={<RouteGuard><OpenCustomerAccountPage /></RouteGuard>} />
+        <Route path="/customer-accounts" element={<RouteGuard><CustomerAccountsPage /></RouteGuard>} />
         <Route path="/messages" element={<RouteGuard><MessagingPage /></RouteGuard>} />
         <Route path="/adjustments" element={<RouteGuard><AdjustmentsPage /></RouteGuard>} />
         <Route path="/customer-data" element={<RouteGuard><CustomerDataPage /></RouteGuard>} />
@@ -104,9 +114,14 @@ function AppRoutes() {
 export default function App() {
   return (
     <AppProvider>
-      <HashRouter>
+      {/* Real paths (/open-account, not /#/open-account) — whatever
+       * serves the built app in production must rewrite every path back
+       * to index.html (an SPA fallback rule) or a fresh load on any
+       * non-root URL 404s. Vite's own dev server already does this, so
+       * local development needs no extra configuration. */}
+      <BrowserRouter>
         <AppRoutes />
-      </HashRouter>
+      </BrowserRouter>
     </AppProvider>
   );
 }

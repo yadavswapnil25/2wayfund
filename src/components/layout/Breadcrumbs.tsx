@@ -3,8 +3,13 @@ import { ROUTES } from "../../data/constants";
 import { useApp } from "../../state/AppContext";
 
 export function Breadcrumbs() {
+  const { session } = useApp();
   const location = useLocation();
-  const entry = ROUTES.find((r) => r.path === location.pathname);
+  // An unauthenticated visitor at "/" sees the Home page rendered in place
+  // (see RouteGuard) with the URL left at "/" — the crumb must reflect
+  // what's actually on screen, not the "/" route's own (customer-only) entry.
+  const crumbPath = !session.role && location.pathname === "/" ? "/home" : location.pathname;
+  const entry = ROUTES.find((r) => r.path === crumbPath);
   return (
     <div className="bg-tint border-b border-border-lt">
       <div className="max-w-[1360px] mx-auto px-5.5 py-2 text-[11.5px] text-ink-2">

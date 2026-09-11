@@ -15,12 +15,13 @@ import {
 import { PageHead } from "../../components/ui/Flow";
 import { Stepper, WizActions } from "../../components/ui/Stepper";
 import { Field, FormGrid, Select, TextArea, TextInput } from "../../components/ui/Field";
+import { DatePicker } from "../../components/ui/DatePicker";
 import { Btn } from "../../components/ui/Button";
 import { Callout, DetailGrid } from "../../components/ui/Misc";
 import { Modal } from "../../components/ui/Modal";
 import { useApp } from "../../state/AppContext";
 import { REFERRAL_FORMAT, validPhone } from "../../lib/validators";
-import { validateDob } from "../../lib/dates";
+import { isoYearsAgo, validateDob } from "../../lib/dates";
 import { freshKyc } from "../../lib/kyc";
 import { formatCode } from "../../lib/format";
 import { ApiError } from "../../services/apiClient";
@@ -527,7 +528,15 @@ export function OpenAccountPage() {
                   />
                 </Field>
                 <Field label="Date of birth" htmlFor="oa-dob" required error={errors["f-dob"]} hint="Applicant must be 18 or over.">
-                  <TextInput id="oa-dob" type="date" value={dob} onChange={(e) => setDob(e.target.value)} hasError={!!errors["f-dob"]} />
+                  <DatePicker
+                    id="oa-dob"
+                    value={dob}
+                    onChange={setDob}
+                    min={isoYearsAgo(100)}
+                    max={isoYearsAgo(18)}
+                    hasError={!!errors["f-dob"]}
+                    placeholder="Select date of birth"
+                  />
                 </Field>
                 <Field label="Education" htmlFor="oa-education">
                   <Select id="oa-education" value={education} onChange={(e) => setEducation(e.target.value)}>
@@ -740,8 +749,9 @@ export function OpenAccountPage() {
                 sub="Review everything entered, then accept the terms to submit. Stages 6 and 7 — account approval and live international payment services — follow once a compliance officer reviews this application."
               />
 
-              <p className="text-[10.5px] font-bold uppercase tracking-wide text-ink-2 mb-1">Stage 1 — Account selection</p>
-              <DetailGrid
+              <ReviewSection
+                icon={<Landmark size={15} />}
+                title="Stage 1 — Account selection"
                 items={[
                   ["Country", country],
                   ["Account tier", tier],
@@ -750,8 +760,9 @@ export function OpenAccountPage() {
                 ]}
               />
 
-              <p className="text-[10.5px] font-bold uppercase tracking-wide text-ink-2 mb-1">Stage 2 — Application</p>
-              <DetailGrid
+              <ReviewSection
+                icon={<UserPlus size={15} />}
+                title="Stage 2 — Application"
                 items={[
                   ["Full name", name],
                   ["Father's / husband's name", fatherName],
@@ -762,8 +773,9 @@ export function OpenAccountPage() {
                 ]}
               />
 
-              <p className="text-[10.5px] font-bold uppercase tracking-wide text-ink-2 mb-1">Stage 3 — Identity &amp; business verification</p>
-              <DetailGrid
+              <ReviewSection
+                icon={<ShieldCheck size={15} />}
+                title="Stage 3 — Identity & business verification"
                 items={[
                   ["Organisation", organisation],
                   ["Occupation", occupation],
@@ -772,8 +784,14 @@ export function OpenAccountPage() {
                 ]}
               />
 
-              <p className="text-[10.5px] font-bold uppercase tracking-wide text-ink-2 mb-1">Stage 4 — Financial requirement</p>
-              <DetailGrid items={[["Cross-border reason", crossBorderReason], ["Cross-border detail", crossBorderDetail]]} />
+              <ReviewSection
+                icon={<Banknote size={15} />}
+                title="Stage 4 — Financial requirement"
+                items={[
+                  ["Cross-border reason", crossBorderReason],
+                  ["Cross-border detail", crossBorderDetail],
+                ]}
+              />
 
               <FormGrid className="mt-2">
                 <FileField
@@ -860,18 +878,10 @@ export function OpenAccountPage() {
                   ))}
                 </Callout>
               ) : null}
-              <p className="text-[12.5px] text-ink mb-4">
-                Next step: complete eKYC verification (stage 3 continues there). Stage 6 — account approval — follows once a compliance officer
-                reviews this application; stage 7 is the live account.
+              <p className="text-[12.5px] text-ink">
+                Stage 6 — account approval — follows once a compliance officer reviews this application; stage 7 is the live account. You'll be
+                notified by email once a decision has been made — there's nothing further to do right now.
               </p>
-              <div className="flex items-center gap-3 flex-wrap">
-                <Link
-                  to={`/ekyc?ref=${encodeURIComponent(submitted.ref)}`}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-navy-dk bg-gradient-to-b from-navy-lt to-navy px-4 py-2 text-xs font-semibold text-white no-underline hover:brightness-110"
-                >
-                  Continue to eKYC →
-                </Link>
-              </div>
             </div>
           ) : null}
         </div>
@@ -904,6 +914,20 @@ export function OpenAccountPage() {
         </Modal>
       ) : null}
     </>
+  );
+}
+
+function ReviewSection({ icon, title, items }: { icon: ReactNode; title: string; items: [string, ReactNode][] }) {
+  return (
+    <div className="bg-white border border-border-lt rounded-xl shadow-sm overflow-hidden mb-4">
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border-lt bg-tint">
+        <span className="text-navy flex-none">{icon}</span>
+        <span className="text-[12.5px] font-bold text-navy">{title}</span>
+      </div>
+      <div className="px-4 pt-3.5 pb-0.5">
+        <DetailGrid items={items} />
+      </div>
+    </div>
   );
 }
 

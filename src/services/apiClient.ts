@@ -22,8 +22,8 @@ export class ApiError extends Error {
   }
 }
 
-const API_URL = import.meta.env.VITE_API_URL;
-const CLIENT_KEY = import.meta.env.VITE_CLIENT_API_KEY;
+export const API_URL = import.meta.env.VITE_API_URL;
+export const CLIENT_KEY = import.meta.env.VITE_CLIENT_API_KEY;
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   // FormData bodies (file uploads) must NOT get a manual Content-Type —
@@ -57,4 +57,25 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   }
 
   return body.data as T;
+}
+
+/** For endpoints that return a raw file (e.g. a profile photo) instead of
+ * the `{status,message,data,errors}` envelope — apiFetch can't be reused
+ * since it always tries to parse JSON. Returns null on a 404 (no file to
+ * show) and throws ApiError on any other failure. */
+export async function apiFetchBlob(path: string, init?: RequestInit): Promise<Blob | null> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...init,
+      headers: { "X-Client-Key": CLIENT_KEY, ...init?.headers },
+    });
+  } catch {
+    throw new ApiError("Could not reach the server. Check your connection and try again.", 0, null);
+  }
+
+  if (response.status === 404) return null;
+  if (!response.ok) throw new ApiError("Something went wrong. Please try again.", response.status, null);
+
+  return response.blob();
 }

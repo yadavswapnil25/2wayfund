@@ -5,9 +5,8 @@ import { monogram } from "../../lib/format";
 import { NotificationsMenu } from "./NotificationsMenu";
 
 export function Brandbar({ onToggleNav }: { onToggleNav: () => void }) {
-  const { session, logout, store } = useApp();
+  const { session, logout, store, photoUrl } = useApp();
   const [logoError, setLogoError] = useState(false);
-  const [avatarError, setAvatarError] = useState(false);
   const signedIn = Boolean(session.role);
 
   return (
@@ -55,12 +54,11 @@ export function Brandbar({ onToggleNav }: { onToggleNav: () => void }) {
             {session.role === "customer" ? <NotificationsMenu /> : null}
 
             <div className="flex items-center gap-2.5">
-              {session.role === "customer" && !avatarError ? (
+              {session.role === "customer" && photoUrl ? (
                 <img
-                  src="/user.jpg"
+                  src={photoUrl}
                   alt={session.display}
                   className="flex-none w-9 h-9 rounded-full object-cover border border-navy-lt/30"
-                  onError={() => setAvatarError(true)}
                 />
               ) : (
                 <span className="flex-none w-9 h-9 rounded-full bg-gradient-to-br from-[#E8D6A8] to-gold text-navy-dk text-[12.5px] font-bold flex items-center justify-center border border-navy-lt/30">

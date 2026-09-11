@@ -24,10 +24,25 @@ const TINY_PDF = Buffer.from(
     "3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 3 3]>>endobj\ntrailer<</Root 1 0 R/Size 4>>\n%%EOF",
 );
 
+/** The date of birth field is a custom calendar (src/components/ui/DatePicker.tsx),
+ * not a native `<input type="date">`, so it's driven by opening the
+ * popover and picking month/year/day rather than `.fill()`. */
+async function selectDob(page: Page, iso: string) {
+  const [yearStr, monthStr, dayStr] = iso.split("-");
+  const monthIndex = Number(monthStr) - 1;
+  const day = Number(dayStr);
+
+  await page.locator("#oa-dob").click();
+  const dialog = page.getByRole("dialog", { name: "Choose a date" });
+  await dialog.getByRole("combobox").first().selectOption(String(monthIndex));
+  await dialog.getByRole("combobox").nth(1).selectOption(yearStr);
+  await dialog.getByRole("button", { name: day.toString(), exact: true }).click();
+}
+
 async function fillStage2(page: Page, email: string) {
   await page.locator("#oa-name").fill("Playwright Applicant");
   await page.locator("#oa-father").fill("Playwright Parent");
-  await page.locator("#oa-dob").fill("1991-04-17");
+  await selectDob(page, "1991-04-17");
   await page.locator("#oa-addr-comm").fill("14 Sample Street, Andheri East, Mumbai 400069, India");
   await page.locator("#oa-mob-personal").fill("+91 90000 00000");
   await page.locator("#oa-email").fill(email);
@@ -42,7 +57,7 @@ async function fillStage4(page: Page) {
 }
 
 async function walkToReview(page: Page, email: string) {
-  await page.goto("/#/open-account");
+  await page.goto("/open-account");
 
   await page.getByPlaceholder("2WF-XXXXXX").fill("2WF-DEMO01");
   await page.getByRole("button", { name: "Verify Referral Code" }).click();
@@ -101,7 +116,7 @@ test.describe("Open an Account", () => {
 
   test("a corporate tier requires a business name and a real business certificate upload", async ({ page }) => {
     const uniqueEmail = `e2e.corp.${Date.now()}@example.invalid`;
-    await page.goto("/#/open-account");
+    await page.goto("/open-account");
 
     await page.getByPlaceholder("2WF-XXXXXX").fill("2WF-DEMO01");
     await page.getByRole("button", { name: "Verify Referral Code" }).click();
@@ -140,7 +155,7 @@ test.describe("Open an Account", () => {
   });
 
   test("rejects an unrecognised referral code before reaching stage 1", async ({ page }) => {
-    await page.goto("/#/open-account");
+    await page.goto("/open-account");
 
     await page.getByPlaceholder("2WF-XXXXXX").fill("2WF-NOPE01");
     await page.getByRole("button", { name: "Verify Referral Code" }).click();
@@ -150,7 +165,7 @@ test.describe("Open an Account", () => {
   });
 
   test("blocks progress at stage 2 when required applicant details are missing", async ({ page }) => {
-    await page.goto("/#/open-account");
+    await page.goto("/open-account");
 
     await page.getByPlaceholder("2WF-XXXXXX").fill("2WF-DEMO01");
     await page.getByRole("button", { name: "Verify Referral Code" }).click();

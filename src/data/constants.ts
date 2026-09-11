@@ -9,24 +9,35 @@ export interface RouteDef {
 }
 
 export const ROUTES: RouteDef[] = [
-  { path: "/login", tab: null, crumb: "Customer Login", access: "public" },
+  { path: "/login", tab: null, crumb: "Internet Banking Login", access: "public" },
+  { path: "/corporate-login", tab: null, crumb: "Corporate Internet Banking Login", access: "public" },
   { path: "/admin-login", tab: null, crumb: "Staff Login", access: "public" },
   { path: "/set-password", tab: null, crumb: "Set Your Password", access: "public" },
+  { path: "/register-account", tab: null, crumb: "Register for Online Access", access: "public" },
   { path: "/denied", tab: null, crumb: "Access Denied", access: "public" },
   { path: "/", tab: "Account & Passbook", crumb: "Accounts › Account & Passbook", group: "Accounts", access: "customer" },
   { path: "/transfer", tab: "Transfer Funds", crumb: "Transfers › Transfer Funds", group: "Transfers", access: "customer" },
   { path: "/beneficiaries", tab: "Beneficiaries", crumb: "Transfers › Manage Beneficiaries", group: "Transfers", access: "customer" },
+  {
+    path: "/beneficiaries-directory",
+    tab: "Beneficiaries Directory",
+    crumb: "Transfers › Saved Beneficiaries Directory",
+    group: "Transfers",
+    access: "customer",
+  },
   { path: "/nominees", tab: "Nominees", crumb: "Transfers › Nomination", group: "Transfers", access: "customer" },
   { path: "/receive", tab: null, crumb: "Transfers › Receive International Payment", group: "Transfers", access: "customer" },
   { path: "/domestic", tab: "Domestic (INR)", crumb: "Accounts › Domestic Transactions", group: "Accounts", access: "customer" },
   { path: "/international", tab: "Foreign Currency", crumb: "Accounts › International Transactions", group: "Accounts", access: "customer" },
   { path: "/statements", tab: "Statements", crumb: "Accounts › Statements & Receipts", group: "Accounts", access: "customer" },
   { path: "/pin-security", tab: "9-Digit PIN & Security", crumb: "Accounts › 9-Digit PIN & Security", group: "Accounts", access: "customer" },
-  // { path: "/exchange", tab: "Forex", crumb: "Transfers › Currency Exchange", group: "Transfers", access: "customer" },
+  { path: "/exchange", tab: "Currency Exchange", crumb: "Transfers › Currency Exchange", group: "Transfers", access: "customer" },
   // { path: "/usdt", tab: "USDT Wallet", crumb: "Transfers › USDT Wallet", group: "Transfers", access: "customer" },
   { path: "/cards", tab: "Cards", crumb: "Cards › Card Services", group: "Cards", access: "customer" },
   { path: "/console", tab: "Console Home", crumb: "Operations › Console Home", group: "Administration", access: "admin" },
   { path: "/admin", tab: "Compliance Console", crumb: "Administration › Compliance Console", group: "Administration", access: "admin" },
+  { path: "/open-customer-account", tab: "Open Account", crumb: "Administration › Open Account", group: "Administration", access: "admin" },
+  { path: "/customer-accounts", tab: "Customer Accounts", crumb: "Administration › Customer Accounts", group: "Administration", access: "admin" },
   { path: "/messages", tab: "Customer Messaging", crumb: "Administration › Customer Messaging", group: "Administration", access: "admin" },
   { path: "/adjustments", tab: "Ledger Adjustments", crumb: "Administration › Ledger Adjustments", group: "Administration", access: "admin" },
   { path: "/customer-data", tab: "Customer Data", crumb: "Administration › Customer Data Maintenance", group: "Administration", access: "admin" },
@@ -60,9 +71,12 @@ export interface PublicNavGroup {
   items: PublicNavItem[];
 }
 
-/** Top-level links shown directly in the public navbar. */
+/** Top-level links shown directly in the public navbar. The Home link
+ * points at the bare root — for a visitor with no session, RouteGuard
+ * renders the Home page there directly, so the URL stays "/" instead of
+ * moving to "/home". */
 export const PUBLIC_NAV_PRIMARY: PublicNavItem[] = [
-  { label: "Home", path: "/home" },
+  { label: "Home", path: "/" },
   { label: "About Us", path: "/company" },
   { label: "Clients", path: "/clients" },
 ];
@@ -89,13 +103,6 @@ export const PUBLIC_NAV_GROUPS: PublicNavGroup[] = [
     ],
   },
 ];
-
-/** Two demo credentials for this account, printed on-screen exactly as a
- * real institution never would — nothing here is a real secret. */
-export const CREDENTIALS = {
-  customer: { user: "aditi.sharma", pass: "demo1234", secureCode: "20260817" },
-  admin: { user: "compliance.officer", pass: "admin1234" },
-};
 
 export interface TransferChannel {
   id: "IMPS" | "NEFT" | "RTGS";
@@ -161,3 +168,9 @@ export const MSG_TEMPLATES = [
 ];
 
 export const ACCOUNT_OPENED_ISO = "2026-01-01";
+
+/** sessionStorage key for a one-time notice shown on the next login page
+ * a customer lands on after being signed out on purpose (e.g. right
+ * after changing their NetBanking password) — set by whichever page
+ * triggers the sign-out, read and cleared by CredentialLoginCard. */
+export const LOGIN_NOTICE_KEY = "2wf-login-notice";

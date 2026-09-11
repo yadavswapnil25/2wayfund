@@ -1,20 +1,23 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Building2, Check, CheckCircle2, Eye, EyeOff, KeyRound, Landmark, Printer, ShieldAlert, ShieldCheck, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Eye, EyeOff, KeyRound, Landmark, Zap } from "lucide-react";
 import { PageHead } from "../../components/ui/Flow";
 import { Field, TextInput } from "../../components/ui/Field";
 import { Btn } from "../../components/ui/Button";
 import { DetailGrid, Note, ReviewLine } from "../../components/ui/Misc";
 import { Stepper, WizActions } from "../../components/ui/Stepper";
 import { Tag } from "../../components/ui/Tag";
-import { Modal } from "../../components/ui/Modal";
 import { useApp } from "../../state/AppContext";
 import { TRANSFER_CHANNELS } from "../../data/constants";
-import { beneCodeLabel, beneficiaryRestrictionReason, corridorFor, isAllowedBeneficiary, isHeld, transferChannel, txQuote } from "../../lib/transfer";
+import { beneCodeLabel, beneficiaryRestrictionReason, isAllowedBeneficiary, transferChannel, txQuote } from "../../lib/transfer";
 import { displayMoney, formatCode } from "../../lib/format";
 import { amountInWordsInr } from "../../lib/words";
-import { clockTime, today, todayIso } from "../../lib/dates";
-import type { Transaction } from "../../types/data";
+import { getMe, getBalances } from "../../services/meService";
+import { listBeneficiaries } from "../../services/beneficiaryService";
+import { createTransfer } from "../../services/transferService";
+import { ApiError } from "../../services/apiClient";
+import { TransferReceiptPanel, TransferVoucherModal, type TransferReceiptView } from "./TransferReceiptViews";
+import type { Balance, Beneficiary } from "../../types/data";
 
 const CHANNEL_ICONS: Record<string, typeof Zap> = { IMPS: Zap, NEFT: Landmark, RTGS: Building2 };
 
@@ -26,24 +29,19 @@ function parseAmount(raw: string): number {
   return isFinite(n) && n > 0 ? n : 0;
 }
 
-interface Receipt {
-  reference: string;
-  utr: string;
-  held: boolean;
-  debit: number;
-  commission: number;
-  commissionRate: number;
-  beneficiaryName: string;
-  beneficiaryBank: string;
-  beneficiaryAccount: string;
-  routing: string;
-  channelLabel: string;
-  clearing: string;
-  balance: number;
+/** The envelope's own message is generic — the useful, specific reason is
+ * nested under the offending field instead (matches ExchangePage,
+ * BeneficiariesPage). */
+function firstErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    const firstFieldMessage = err.fieldErrors ? Object.values(err.fieldErrors)[0]?.[0] : undefined;
+    return firstFieldMessage ?? err.message;
+  }
+  return fallback;
 }
 
 export function TransferFundsPage() {
-  const { store, setStore, balancesHidden } = useApp();
+  const { store, setStore, session, balancesHidden } = useApp();
   const [stage, setStage] = useState<1 | 2 | 3>(1);
   const [beneId, setBeneId] = useState("");
   const [channelId, setChannelId] = useState<"IMPS" | "NEFT" | "RTGS">("IMPS");
@@ -54,14 +52,51 @@ export function TransferFundsPage() {
   const [pin, setPin] = useState("");
   const [pinVisible, setPinVisible] = useState(false);
   const [pinError, setPinError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [receipt, setReceipt] = useState<TransferReceiptView | null>(null);
   const [voucherOpen, setVoucherOpen] = useState(false);
 
-  const beneficiary = store.beneficiaries.find((b) => b.id === beneId) || null;
+  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>(store.beneficiaries);
+  const [balances, setBalances] = useState<Balance[]>(store.balances);
+
+  // Seed data renders immediately, then is quietly replaced by real data —
+  // the shared store is only fresh once some other page has loaded it, so
+  // this page fetches its own copies rather than trusting it's current
+  // (matches ExchangePage, PinSecurityPage).
+  const loadBalances = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!session.token) return;
+      try {
+        const real = await getBalances(session.token, signal);
+        setBalances(real);
+      } catch {
+        // Best-effort — the seed/last-known balances stay displayed.
+      }
+    },
+    [session.token],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const token = session.token;
+    if (!token) return;
+
+    // Best-effort — on failure, the seed beneficiaries/profile stay displayed.
+    const noop = () => undefined;
+    void loadBalances(controller.signal);
+    void listBeneficiaries(token, controller.signal).then(setBeneficiaries).catch(noop);
+    void getMe(token, controller.signal)
+      .then((me) => setStore((s) => ({ ...s, user: { ...s.user, ...me } })))
+      .catch(noop);
+
+    return () => controller.abort();
+  }, [session.token, setStore, loadBalances]);
+
+  const beneficiary = beneficiaries.find((b) => b.id === beneId) || null;
   const amount = parseAmount(amountRaw);
   const channel = transferChannel(channelId);
-  const inrLedger = store.balances.find((b) => b.currency === "INR")!;
+  const inrLedger = balances.find((b) => b.currency === "INR") ?? { currency: "INR" as const, amount: 0, note: "" };
   const quote = beneficiary ? txQuote(store, amount, beneficiary) : null;
 
   function resetAll() {
@@ -108,105 +143,50 @@ export function TransferFundsPage() {
     setStage(2);
   }
 
-  function authorize() {
+  async function authorize() {
     if (!/^\d{9}$/.test(pin)) {
       setPinError("Enter your 9-digit transaction PIN.");
       return;
     }
-    if (pin !== store.user.pin) {
-      setPinError("Incorrect PIN. Check your 9-digit transaction PIN and try again.");
-      return;
-    }
-    if (!beneficiary || !quote) return;
+    if (!beneficiary || !quote || !session.token || submitting) return;
     setPinError(null);
+    setSubmitting(true);
 
-    const txRefCounter = store.transactions.length + 88215;
-    const reference = "2WF-TXN-" + todayIso().replace(/-/g, "") + "-" + String(txRefCounter).padStart(5, "0");
-    const utr = "UTR" + String(500000000000 + txRefCounter).slice(0, 12);
-    const held = isHeld(quote);
-    const newBalance = inrLedger.amount - quote.debit;
-    const beneficiaryBank = beneficiary.bankName || (beneficiary.internal ? "2 Way Fund International" : beneficiary.detail);
+    try {
+      const result = await createTransfer(
+        { beneficiaryId: beneficiary.id, channel: channelId, amount, remarks: remarks.trim() || undefined, pin },
+        session.token,
+      );
 
-    const status: Transaction["status"] = held ? "Under review" : "Completed";
-
-    setStore((s) => {
-      const balances = s.balances.map((b) => (b.currency === "INR" ? { ...b, amount: b.amount - quote.debit } : b));
-      const transactions: Transaction[] = [
-        {
-          date: today(),
-          time: clockTime(),
-          valueIso: todayIso(),
-          reversed: false,
-          ref: reference,
-          utr,
-          corridor: corridorFor(beneficiary.country),
-          route: beneficiary.ifsc ? `IFSC ${beneficiary.ifsc}` : beneficiary.internal ? "On-platform" : "—",
-          counterparty: beneficiary.country,
-          channel: channel.label + " transfer",
-          beneficiary: beneficiary.name,
-          beneficiaryAccount: beneficiary.account,
-          beneficiaryBank,
-          routing: beneCodeLabel(beneficiary),
-          commission: quote.commission,
-          commissionCurrency: "INR",
-          receives: quote.receives,
-          receivesCurrency: beneficiary.currency,
-          description: (beneficiary.internal ? "Internal transfer — " : "Beneficiary payout — ") + beneficiary.name,
-          sub: channel.label + " · " + (held ? "Held for compliance screening · ref " + reference : "Settled · ref " + reference),
-          status,
-          currency: "INR",
-          amount,
-          direction: "debit",
-        },
-        ...(quote.commission > 0
-          ? [
-              {
-                date: today(),
-                time: clockTime(),
-                valueIso: todayIso(),
-                reversed: false,
-                ref: reference + "-C",
-                corridor: corridorFor(beneficiary.country),
-                route: "Charge",
-                counterparty: beneficiary.country,
-                channel: "Commission",
-                description: "Commission — standard transaction 2%, charged to sender",
-                sub: "Applied to " + reference,
-                status: "Completed" as const,
-                currency: "INR" as const,
-                amount: quote.commission,
-                direction: "debit" as const,
-              },
-            ]
-          : []),
-        ...s.transactions,
-      ];
-      return { ...s, balances, transactions };
-    });
-
-    setReceipt({
-      reference,
-      utr,
-      held,
-      debit: quote.debit,
-      commission: quote.commission,
-      commissionRate: quote.commissionRate,
-      beneficiaryName: beneficiary.name,
-      beneficiaryBank,
-      beneficiaryAccount: beneficiary.account,
-      routing: beneCodeLabel(beneficiary),
-      channelLabel: channel.label,
-      clearing: channel.clearing,
-      balance: newBalance,
-    });
-    setStage(3);
+      setBalances((prev) => prev.map((b) => (b.currency === "INR" ? { ...b, amount: result.balance } : b)));
+      setReceipt({
+        reference: result.reference,
+        utr: result.utr,
+        held: result.held,
+        debit: result.amount + result.commission,
+        commission: result.commission,
+        commissionRate: quote.commissionRate,
+        beneficiaryName: result.beneficiaryName,
+        beneficiaryBank: result.beneficiaryBank,
+        beneficiaryAccount: result.beneficiaryAccount,
+        routing: result.routing,
+        channelLabel: channel.label,
+        clearing: channel.clearing,
+        balance: result.balance,
+      });
+      setStage(3);
+    } catch (err) {
+      setPinError(firstErrorMessage(err, "Could not authorize this transfer. Please try again."));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <>
       <PageHead
         title="Electronic Fund Transfer"
-        lede="Transfer to Indian Commercial Banks (IMPS / NEFT / RTGS) or internal 2 Way Fund accounts. No money moves — settlement is simulated against the in-memory ledger."
+        lede="Transfer to Indian Commercial Banks (IMPS / NEFT / RTGS) or internal 2 Way Fund accounts. Authorised by your 9-digit transaction PIN."
       />
 
       <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden mb-5">
@@ -247,7 +227,7 @@ export function TransferFundsPage() {
                 className="w-full text-[13px] px-2.5 py-2 border border-border bg-white rounded-lg focus:outline-none focus:border-navy-lt focus:ring-2 focus:ring-navy-lt/20"
               >
                 <option value="">Select a beneficiary…</option>
-                {store.beneficiaries.map((b) => {
+                {beneficiaries.map((b) => {
                   const notAllowed = !isAllowedBeneficiary(b);
                   const blockedVerify = b.status !== "Verified";
                   return (
@@ -375,75 +355,25 @@ export function TransferFundsPage() {
             </div>
 
             <WizActions>
-              <Btn onClick={() => setStage(1)}>
+              <Btn onClick={() => setStage(1)} disabled={submitting}>
                 <span className="inline-flex items-center gap-1.5">
                   <ArrowLeft size={13} /> Back to Edit
                 </span>
               </Btn>
-              <Btn variant="approve" disabled={pin.length !== 9} onClick={authorize}>
-                Authorize &amp; Transfer {formatCode(quote.debit, "INR")}
+              <Btn variant="approve" disabled={pin.length !== 9 || submitting} onClick={() => void authorize()}>
+                {submitting ? "Authorizing…" : `Authorize & Transfer ${formatCode(quote.debit, "INR")}`}
               </Btn>
             </WizActions>
           </div>
         ) : null}
 
         {stage === 3 && receipt ? (
-          <div>
-            <div className={`px-5 py-7 text-center border-b border-border-lt ${receipt.held ? "bg-[#FBF4E1]" : "bg-[#F0F8F3]"}`}>
-              <div className={`w-12 h-12 rounded-full text-white flex items-center justify-center mx-auto mb-3 ${receipt.held ? "bg-amber" : "bg-pos"}`}>
-                {receipt.held ? <ShieldAlert size={22} /> : <CheckCircle2 size={22} />}
-              </div>
-              <h2 className="text-[19px] mb-1.5">{receipt.held ? "Submitted — Under Review" : "Payment Processed Successfully!"}</h2>
-              <p className="m-0 text-ink-2 text-[12.5px]">
-                {receipt.held
-                  ? "Authorised and accepted, then held for compliance screening before settlement."
-                  : "Amount debited and credited to beneficiary account. Core ledger transaction is finalised."}
-              </p>
-            </div>
-            <div className="p-4.5 sm:p-5">
-              <div className="rounded-2xl border border-border-lt bg-white px-4.5 py-2 mb-4">
-                <ReviewLine k="Bank UTR Number" v={receipt.utr} />
-                <ReviewLine k="Transaction Ref No" v={receipt.reference} />
-                <ReviewLine k="Beneficiary Payee" v={receipt.beneficiaryName} />
-                <ReviewLine k="Beneficiary Bank" v={receipt.beneficiaryBank} />
-                <ReviewLine k="Amount Transferred" v={formatCode(receipt.debit, "INR")} kind="total" />
-                <ReviewLine k="Updated Balance" v={displayMoney(receipt.balance, "INR", balancesHidden)} kind="total" />
-              </div>
-
-              {receipt.held ? (
-                <Note className="mt-2">
-                  Value band screening flagged this transaction for manual review, so it appears on your ledger as <strong>Under review</strong>{" "}
-                  rather than Completed. A reviewer adjudicates it before settlement.
-                </Note>
-              ) : null}
-              <Note danger className="mt-2">
-                No money moved. Settlement is simulated against an in-memory ledger and a page reload restores the seeded balances.
-              </Note>
-
-              <div className="flex items-center gap-2.5 flex-wrap border-t border-border-lt pt-4 mt-4">
-                <button
-                  type="button"
-                  onClick={() => setVoucherOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-navy-dk bg-gradient-to-b from-navy-lt to-navy px-4 py-2 text-xs font-semibold text-white shadow-sm hover:brightness-110"
-                >
-                  <Printer size={13} /> Download / Print Official Receipt
-                </button>
-                <button
-                  type="button"
-                  onClick={resetAll}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold text-ink hover:bg-tint"
-                >
-                  Make Another Transfer
-                </button>
-                <Link
-                  to="/statements"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold text-ink no-underline hover:bg-tint"
-                >
-                  View in Passbook <ArrowRight size={13} />
-                </Link>
-              </div>
-            </div>
-          </div>
+          <TransferReceiptPanel
+            receipt={receipt}
+            balancesHidden={balancesHidden}
+            onOpenVoucher={() => setVoucherOpen(true)}
+            onReset={resetAll}
+          />
         ) : null}
       </div>
 
@@ -467,46 +397,14 @@ export function TransferFundsPage() {
       </div>
 
       {voucherOpen && receipt ? (
-        <Modal
-          title={
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck size={15} className="text-navy" /> Official Bank Transaction Advisory Voucher
-            </span>
-          }
+        <TransferVoucherModal
+          receipt={receipt}
+          accountNumber={store.user.accountNumber}
+          ifsc={store.user.ifsc}
+          micr={store.user.micr}
+          balancesHidden={balancesHidden}
           onClose={() => setVoucherOpen(false)}
-          footerExtra={
-            <Btn variant="primary" onClick={() => window.print()}>
-              <Printer size={13} className="inline -mt-0.5 mr-1" /> Print Receipt
-            </Btn>
-          }
-        >
-          <span className="inline-block text-[9.5px] font-bold tracking-wide uppercase text-neg bg-[#FBEAE8] border border-[#E0AEA7] px-2 py-0.5 rounded mb-2.5">
-            Academic demo — fictional record, no real funds moved
-          </span>
-          <h4 className="mb-1 text-[15px]">2 Way Fund International</h4>
-          <p className="text-ink-2 text-[11.5px] mb-1">Core Electronic Settlement &amp; Clearing Advisory</p>
-          <p className="text-ink-2 text-[11.5px] mb-3">
-            IFSC: {store.user.ifsc} · MICR: {store.user.micr}
-          </p>
-          <Tag variant={receipt.held ? "review" : "completed"} className="!inline-block mb-3">
-            <span className="inline-flex items-center gap-1">
-              {receipt.held ? <ShieldAlert size={11} /> : <Check size={11} />} Status: {receipt.held ? "Under Review" : "Successful"}
-            </span>
-          </Tag>
-          <ReviewLine k="Bank UTR Number" v={receipt.utr} />
-          <ReviewLine k="Core Reference ID" v={receipt.reference} />
-          <ReviewLine k="Transaction Date" v={`${todayIso()} ${clockTime()}`} />
-          <ReviewLine k="Remitter Account" v={store.user.accountNumber} />
-          <ReviewLine k="Beneficiary Payee" v={receipt.beneficiaryName} />
-          <ReviewLine k="Beneficiary Bank" v={receipt.beneficiaryBank} />
-          <ReviewLine k="Routing / IFSC Code" v={receipt.routing} />
-          <ReviewLine k="Payment Channel" v={receipt.channelLabel} />
-          <ReviewLine k="Settled Amount" v={formatCode(receipt.debit, "INR")} kind="total" />
-          <p className="text-ink-2 text-[11.5px] italic mt-2">Amount in words: {amountInWordsInr(receipt.debit)} Only</p>
-          <ReviewLine k="Closing Balance" v={displayMoney(receipt.balance, "INR", balancesHidden)} />
-          <p className="text-xs text-ink-2 mt-3">This is a computer-generated bank electronic advisory. No physical signature is required under Indian IT Act 2000.</p>
-          <p className="text-xs text-neg font-semibold">2 Way Fund International is a fictional institution created for this design prototype. No real funds were transferred.</p>
-        </Modal>
+        />
       ) : null}
     </>
   );

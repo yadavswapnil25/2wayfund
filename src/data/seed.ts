@@ -31,6 +31,7 @@ export function createSeedStore(): Store {
       pinStatus: "Active",
       kycStatus: "Verified",
       lastLogin: "07 Sep 2026, 21:24:40 IST",
+      hasPhoto: false,
     },
 
     rates: {

@@ -3,7 +3,6 @@ import { useMemo } from "react";
 import { AlertTriangle, ArrowUpRightFromCircle, ClipboardList, FileCheck2, Inbox, ScrollText } from "lucide-react";
 import { PageHead } from "../../components/ui/Flow";
 import { useApp } from "../../state/AppContext";
-import { CREDENTIALS } from "../../data/constants";
 
 interface Queue {
   label: string;
@@ -125,7 +124,6 @@ export function ConsoleHomePage() {
           <div className="divide-y divide-border-lt">
             {[
               ["Operator", session.display || "—"],
-              ["Staff ID", CREDENTIALS.admin.user],
               ["Environment", "Demo — no production data"],
               ["Signed in", "This browser tab only"],
             ].map(([k, v]) => (

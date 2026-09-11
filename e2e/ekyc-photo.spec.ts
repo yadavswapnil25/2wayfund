@@ -62,7 +62,7 @@ test("a customer can upload their photograph and it is really persisted", async 
 
   expect(hasStoredPhoto(ref)).toBe(false);
 
-  await page.goto(`/#/ekyc?ref=${encodeURIComponent(ref)}`);
+  await page.goto(`/ekyc?ref=${encodeURIComponent(ref)}`);
   await expect(page.getByTestId("doc-photo")).toBeVisible();
 
   const fileChooserPromise = page.waitForEvent("filechooser");

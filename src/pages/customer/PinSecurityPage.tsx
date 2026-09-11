@@ -1,119 +1,181 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { KeyRound, Lock, ShieldCheck } from "lucide-react";
 import { PageHead } from "../../components/ui/Flow";
 import { Field, FormActions, FormGrid, TextInput } from "../../components/ui/Field";
 import { Btn } from "../../components/ui/Button";
 import { Note } from "../../components/ui/Misc";
 import { Tag } from "../../components/ui/Tag";
-import { CREDENTIALS, useApp } from "../../state/AppContext";
+import { useApp } from "../../state/AppContext";
+import { confirmPinChange, confirmPasswordChange, initiatePinChange, initiatePasswordChange } from "../../services/securityService";
+import { getMe } from "../../services/meService";
+import { ApiError } from "../../services/apiClient";
+import { LOGIN_NOTICE_KEY } from "../../data/constants";
+
+/** The envelope's own message is generic — the useful, specific reason is
+ * nested under the offending field instead (matches RegisterAccountPage,
+ * ExchangePage). */
+function firstErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    const firstFieldMessage = err.fieldErrors ? Object.values(err.fieldErrors)[0]?.[0] : undefined;
+    return firstFieldMessage ?? err.message;
+  }
+  return fallback;
+}
+
+type Stage = "form" | "otp" | "done";
 
 export function PinSecurityPage() {
-  const { store, setStore } = useApp();
+  const { store, setStore, session, logout } = useApp();
+  const navigate = useNavigate();
+
+  // The shared store only reflects the real, logged-in customer once
+  // some page has fetched /me — normally the Account & Passbook page, but
+  // a customer can land here first (direct link, bookmark). Refreshing it
+  // here too means the PIN status badge is never a stale leftover from
+  // whoever was last shown in this browser tab.
+  useEffect(() => {
+    if (!session.token) return;
+    const controller = new AbortController();
+    const token = session.token;
+    void getMe(token, controller.signal)
+      .then((me) => setStore((s) => ({ ...s, user: { ...s.user, ...me } })))
+      .catch(() => {
+        // Best-effort — the last-known pinStatus stays displayed.
+      });
+    return () => controller.abort();
+  }, [session.token, setStore]);
 
   const [pinAuth, setPinAuth] = useState("");
   const [pinNew, setPinNew] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
   const [pinErrors, setPinErrors] = useState<Record<string, string | null>>({});
   const [pinFormError, setPinFormError] = useState<string | null>(null);
-  const [pinPending, setPinPending] = useState<string | null>(null);
-  const [pinOtp, setPinOtp] = useState("");
+  const [pinStage, setPinStage] = useState<Stage>("form");
   const [pinOtpInput, setPinOtpInput] = useState("");
   const [pinOtpError, setPinOtpError] = useState<string | null>(null);
-  const [pinDone, setPinDone] = useState(false);
+  const [pinSubmitting, setPinSubmitting] = useState(false);
 
   const [pwAuth, setPwAuth] = useState("");
   const [pwNew, setPwNew] = useState("");
   const [pwConfirm, setPwConfirm] = useState("");
   const [pwErrors, setPwErrors] = useState<Record<string, string | null>>({});
   const [pwFormError, setPwFormError] = useState<string | null>(null);
-  const [pwPending, setPwPending] = useState<string | null>(null);
-  const [pwOtp, setPwOtp] = useState("");
+  const [pwStage, setPwStage] = useState<Stage>("form");
   const [pwOtpInput, setPwOtpInput] = useState("");
   const [pwOtpError, setPwOtpError] = useState<string | null>(null);
-  const [pwDone, setPwDone] = useState(false);
-  const [demoPass, setDemoPass] = useState(CREDENTIALS.customer.pass);
+  const [pwSubmitting, setPwSubmitting] = useState(false);
 
-  function checkAuth(v: string) {
-    return v === demoPass || v === CREDENTIALS.customer.secureCode;
-  }
+  async function submitPin() {
+    if (pinSubmitting) return;
+    const errs: Record<string, string | null> = {};
+    if (!pinAuth) errs.auth = "Enter your current password or 8-digit secure code.";
+    if (!/^\d{9}$/.test(pinNew)) errs.new = "Enter exactly 9 numeric digits.";
+    if (!pinConfirm) errs.confirm = "Re-enter the 9-digit PIN.";
+    else if (pinConfirm !== pinNew) errs.confirm = "PINs do not match.";
+    setPinErrors(errs);
+    if (Object.values(errs).some(Boolean)) return;
+    if (!session.token) {
+      setPinFormError("Your session has no API token — sign out and sign back in.");
+      return;
+    }
 
-  function submitPin() {
-    let ok = true;
-    if (!checkAuth(pinAuth)) {
-      setPinErrors((e) => ({ ...e, auth: "That password or secure code doesn't match. Demo password demo1234, or the 8-digit secure code shown on this page." }));
-      ok = false;
-    } else setPinErrors((e) => ({ ...e, auth: null }));
-
-    if (!/^\d{9}$/.test(pinNew)) {
-      setPinErrors((e) => ({ ...e, new: "Enter exactly 9 numeric digits." }));
-      ok = false;
-    } else setPinErrors((e) => ({ ...e, new: null }));
-
-    if (!pinConfirm) {
-      setPinErrors((e) => ({ ...e, confirm: "Re-enter the 9-digit PIN." }));
-      ok = false;
-    } else if (pinConfirm !== pinNew) {
-      setPinErrors((e) => ({ ...e, confirm: "PINs do not match." }));
-      ok = false;
-    } else setPinErrors((e) => ({ ...e, confirm: null }));
-
-    if (!ok) return;
     setPinFormError(null);
-    setPinPending(pinNew);
-    setPinOtp(String(Math.floor(100000 + Math.random() * 900000)));
-    setPinOtpInput("");
+    setPinSubmitting(true);
+    try {
+      await initiatePinChange({ currentCredential: pinAuth, newPin: pinNew, newPinConfirmation: pinConfirm }, session.token);
+      setPinStage("otp");
+      setPinOtpInput("");
+      setPinOtpError(null);
+    } catch (err) {
+      setPinFormError(firstErrorMessage(err, "Could not start the PIN change. Please try again."));
+    } finally {
+      setPinSubmitting(false);
+    }
+  }
+
+  async function confirmPinOtp() {
+    if (pinSubmitting || !session.token) return;
+    if (!/^\d{6}$/.test(pinOtpInput)) {
+      setPinOtpError("Enter the 6-digit code from your email.");
+      return;
+    }
+
     setPinOtpError(null);
+    setPinSubmitting(true);
+    try {
+      await confirmPinChange(pinOtpInput, session.token);
+      setStore((s) => ({ ...s, user: { ...s.user, pinStatus: "Active" } }));
+      setPinStage("done");
+      setPinAuth("");
+      setPinNew("");
+      setPinConfirm("");
+    } catch (err) {
+      setPinOtpError(firstErrorMessage(err, "Could not confirm that code. Please try again."));
+    } finally {
+      setPinSubmitting(false);
+    }
   }
 
-  function confirmPinOtp() {
-    if (pinOtpInput.trim() !== pinOtp) {
-      setPinOtpError("Incorrect one-time password. The code is shown above.");
+  async function submitPw() {
+    if (pwSubmitting) return;
+    const errs: Record<string, string | null> = {};
+    if (!pwAuth) errs.auth = "Enter your current password or 8-digit secure code.";
+    if (pwNew.length < 8) errs.new = "Password must be at least 8 characters.";
+    if (!pwConfirm) errs.confirm = "Re-enter the new password.";
+    else if (pwConfirm !== pwNew) errs.confirm = "Passwords do not match.";
+    setPwErrors(errs);
+    if (Object.values(errs).some(Boolean)) return;
+    if (!session.token) {
+      setPwFormError("Your session has no API token — sign out and sign back in.");
       return;
     }
-    if (!pinPending) return;
-    setStore((s) => ({ ...s, user: { ...s.user, pin: pinPending, pinStatus: "Active" } }));
-    setPinDone(true);
-    setPinAuth(""); setPinNew(""); setPinConfirm(""); setPinPending(null); setPinOtp("");
-  }
 
-  function submitPw() {
-    let ok = true;
-    if (!checkAuth(pwAuth)) {
-      setPwErrors((e) => ({ ...e, auth: "That password or secure code doesn't match. Demo password demo1234, or the 8-digit secure code shown below." }));
-      ok = false;
-    } else setPwErrors((e) => ({ ...e, auth: null }));
-
-    if (pwNew.length < 6) {
-      setPwErrors((e) => ({ ...e, new: "Password must be at least 6 characters." }));
-      ok = false;
-    } else setPwErrors((e) => ({ ...e, new: null }));
-
-    if (!pwConfirm) {
-      setPwErrors((e) => ({ ...e, confirm: "Re-enter the new password." }));
-      ok = false;
-    } else if (pwConfirm !== pwNew) {
-      setPwErrors((e) => ({ ...e, confirm: "Passwords do not match." }));
-      ok = false;
-    } else setPwErrors((e) => ({ ...e, confirm: null }));
-
-    if (!ok) return;
     setPwFormError(null);
-    setPwPending(pwNew);
-    setPwOtp(String(Math.floor(100000 + Math.random() * 900000)));
-    setPwOtpInput("");
-    setPwOtpError(null);
+    setPwSubmitting(true);
+    try {
+      await initiatePasswordChange({ currentCredential: pwAuth, newPassword: pwNew, newPasswordConfirmation: pwConfirm }, session.token);
+      setPwStage("otp");
+      setPwOtpInput("");
+      setPwOtpError(null);
+    } catch (err) {
+      setPwFormError(firstErrorMessage(err, "Could not start the password change. Please try again."));
+    } finally {
+      setPwSubmitting(false);
+    }
   }
 
-  function confirmPwOtp() {
-    if (pwOtpInput.trim() !== pwOtp) {
-      setPwOtpError("Incorrect one-time password. The code is shown above.");
+  async function confirmPwOtp() {
+    if (pwSubmitting || !session.token) return;
+    if (!/^\d{6}$/.test(pwOtpInput)) {
+      setPwOtpError("Enter the 6-digit code from your email.");
       return;
     }
-    if (!pwPending) return;
-    setDemoPass(pwPending);
-    CREDENTIALS.customer.pass = pwPending;
-    setPwDone(true);
-    setPwAuth(""); setPwNew(""); setPwConfirm(""); setPwPending(null); setPwOtp("");
+
+    setPwOtpError(null);
+    setPwSubmitting(true);
+    try {
+      await confirmPasswordChange(pwOtpInput, session.token);
+      // The password just changed, so this session's credentials are
+      // stale by definition — sign out and send the customer back to
+      // login to prove the new one actually works, the same way a real
+      // bank forces re-authentication after a credential change. The
+      // notice travels via sessionStorage rather than router state: this
+      // page is customer-only, so the moment logout() clears the session,
+      // RouteGuard's own protective redirect fires a competing, state-less
+      // navigation to "/login" that otherwise wins the race.
+      try {
+        sessionStorage.setItem(LOGIN_NOTICE_KEY, "Your NetBanking password has been changed. Please sign in with your new password.");
+      } catch {
+        // sessionStorage can throw (private browsing, disabled storage) —
+        // the customer still gets signed out and redirected either way.
+      }
+      navigate("/login");
+      logout();
+    } catch (err) {
+      setPwOtpError(firstErrorMessage(err, "Could not confirm that code. Please try again."));
+      setPwSubmitting(false);
+    }
   }
 
   const active = store.user.pinStatus === "Active";
@@ -148,63 +210,68 @@ export function PinSecurityPage() {
             </div>
 
             {pinFormError ? <Note danger>{pinFormError}</Note> : null}
-            {pinDone ? (
+            {pinStage === "done" ? (
               <div className="bg-[#F0F8F3] border border-[#A8D4BB] rounded-xl p-4 mb-3">
                 <h3 className="text-pos font-bold mb-2 text-sm">Transaction PIN set</h3>
-                <p className="m-0 text-xs">
+                <p className="m-0 text-xs mb-2.5">
                   Your 9-digit transaction PIN has been set and activated. Use it wherever the transfer flow calls for a transaction password.
                 </p>
+                <button type="button" onClick={() => setPinStage("form")} className="text-xs font-semibold text-navy underline">
+                  Set a different PIN
+                </button>
               </div>
             ) : null}
 
-            <FormGrid>
-              <Field label="Current password or 8-digit secure code" required wide error={pinErrors.auth}>
-                <TextInput type="password" value={pinAuth} onChange={(e) => setPinAuth(e.target.value)} hasError={!!pinErrors.auth} />
-              </Field>
-              <Field
-                label="New 9-digit transaction PIN"
-                required
-                wide
-                error={pinErrors.new}
-                hint={!pinErrors.new ? `Must be exactly 9 numeric digits. Digits: ${pinNew.length}/9` : undefined}
-              >
-                <TextInput
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={9}
-                  value={pinNew}
-                  onChange={(e) => setPinNew(e.target.value.replace(/[^0-9]/g, "").slice(0, 9))}
-                  placeholder="9 numeric digits (e.g. 984018274)"
-                  hasError={!!pinErrors.new}
-                />
-              </Field>
-              <Field label="Confirm new 9-digit PIN" required wide error={pinErrors.confirm}>
-                <TextInput
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={9}
-                  value={pinConfirm}
-                  onChange={(e) => setPinConfirm(e.target.value.replace(/[^0-9]/g, "").slice(0, 9))}
-                  placeholder="Re-enter 9 numeric digits"
-                  hasError={!!pinErrors.confirm}
-                />
-              </Field>
-              <FormActions className="flex-col items-stretch">
-                <Btn variant="block" onClick={submitPin}>
-                  Set &amp; Activate 9-Digit Transaction PIN
-                </Btn>
-                <Note className="!m-0">Nothing entered here leaves your browser.</Note>
-              </FormActions>
-            </FormGrid>
+            {pinStage === "form" ? (
+              <FormGrid>
+                <Field label="Current password or 8-digit secure code" required wide error={pinErrors.auth}>
+                  <TextInput type="password" value={pinAuth} onChange={(e) => setPinAuth(e.target.value)} hasError={!!pinErrors.auth} />
+                </Field>
+                <Field
+                  label="New 9-digit transaction PIN"
+                  required
+                  wide
+                  error={pinErrors.new}
+                  hint={!pinErrors.new ? `Must be exactly 9 numeric digits. Digits: ${pinNew.length}/9` : undefined}
+                >
+                  <TextInput
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={9}
+                    value={pinNew}
+                    onChange={(e) => setPinNew(e.target.value.replace(/[^0-9]/g, "").slice(0, 9))}
+                    placeholder="9 numeric digits (e.g. 984018274)"
+                    hasError={!!pinErrors.new}
+                  />
+                </Field>
+                <Field label="Confirm new 9-digit PIN" required wide error={pinErrors.confirm}>
+                  <TextInput
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={9}
+                    value={pinConfirm}
+                    onChange={(e) => setPinConfirm(e.target.value.replace(/[^0-9]/g, "").slice(0, 9))}
+                    placeholder="Re-enter 9 numeric digits"
+                    hasError={!!pinErrors.confirm}
+                  />
+                </Field>
+                <FormActions className="flex-col items-stretch">
+                  <Btn variant="block" onClick={() => void submitPin()} disabled={pinSubmitting}>
+                    {pinSubmitting ? "Sending code…" : "Set & Activate 9-Digit Transaction PIN"}
+                  </Btn>
+                  <Note className="!m-0">A one-time code will be emailed to the address on file before this takes effect.</Note>
+                </FormActions>
+              </FormGrid>
+            ) : null}
 
-            {pinPending ? (
+            {pinStage === "otp" ? (
               <OtpBox
-                otp={pinOtp}
                 otpInput={pinOtpInput}
                 setOtpInput={setPinOtpInput}
                 error={pinOtpError}
-                onConfirm={confirmPinOtp}
-                onCancel={() => { setPinPending(null); setPinOtp(""); }}
+                submitting={pinSubmitting}
+                onConfirm={() => void confirmPinOtp()}
+                onCancel={() => setPinStage("form")}
               />
             ) : null}
           </div>
@@ -224,51 +291,35 @@ export function PinSecurityPage() {
 
           <div className="px-4.5 sm:px-5 py-4">
             {pwFormError ? <Note danger>{pwFormError}</Note> : null}
-            {pwDone ? (
-              <div className="bg-[#F0F8F3] border border-[#A8D4BB] rounded-xl p-4 mb-3">
-                <h3 className="text-pos font-bold mb-2 text-sm">Password updated</h3>
-                <p className="m-0 text-xs">
-                  Your NetBanking password has been changed. Use the new password next time you sign in — it applies for the rest of this browser
-                  session only.
-                </p>
-              </div>
+
+            {pwStage === "form" ? (
+              <FormGrid>
+                <Field label="Current password or 8-digit secure code" required wide error={pwErrors.auth}>
+                  <TextInput type="password" value={pwAuth} onChange={(e) => setPwAuth(e.target.value)} hasError={!!pwErrors.auth} />
+                </Field>
+                <Field label="New password" required wide error={pwErrors.new} hint={!pwErrors.new ? "Minimum 8 characters" : undefined}>
+                  <TextInput type="password" value={pwNew} onChange={(e) => setPwNew(e.target.value)} hasError={!!pwErrors.new} />
+                </Field>
+                <Field label="Confirm new password" required wide error={pwErrors.confirm}>
+                  <TextInput type="password" value={pwConfirm} onChange={(e) => setPwConfirm(e.target.value)} hasError={!!pwErrors.confirm} />
+                </Field>
+                <FormActions className="flex-col items-stretch">
+                  <Btn variant="block" onClick={() => void submitPw()} disabled={pwSubmitting}>
+                    {pwSubmitting ? "Sending code…" : "Update NetBanking Password"}
+                  </Btn>
+                  <Note className="!m-0">A one-time code will be emailed to the address on file before this takes effect.</Note>
+                </FormActions>
+              </FormGrid>
             ) : null}
 
-            <FormGrid>
-              <Field
-                label="Current password or 8-digit secure code"
-                required
-                wide
-                error={pwErrors.auth}
-                hint={!pwErrors.auth ? "Forgot password? Use your official 8-digit bank secure code — shown below for this demo." : undefined}
-              >
-                <TextInput type="password" value={pwAuth} onChange={(e) => setPwAuth(e.target.value)} hasError={!!pwErrors.auth} />
-              </Field>
-              <Field label="New password" required wide error={pwErrors.new} hint={!pwErrors.new ? "Minimum 6 characters" : undefined}>
-                <TextInput type="password" value={pwNew} onChange={(e) => setPwNew(e.target.value)} hasError={!!pwErrors.new} />
-              </Field>
-              <Field label="Confirm new password" required wide error={pwErrors.confirm}>
-                <TextInput type="password" value={pwConfirm} onChange={(e) => setPwConfirm(e.target.value)} hasError={!!pwErrors.confirm} />
-              </Field>
-              <FormActions className="flex-col items-stretch">
-                <Btn variant="block" onClick={submitPw}>
-                  Update NetBanking Password
-                </Btn>
-                <Note className="!m-0">
-                  Demo current password: <code>{demoPass}</code> — or 8-digit secure code: <code>{CREDENTIALS.customer.secureCode}</code>. Nothing
-                  entered here leaves your browser.
-                </Note>
-              </FormActions>
-            </FormGrid>
-
-            {pwPending ? (
+            {pwStage === "otp" ? (
               <OtpBox
-                otp={pwOtp}
                 otpInput={pwOtpInput}
                 setOtpInput={setPwOtpInput}
                 error={pwOtpError}
-                onConfirm={confirmPwOtp}
-                onCancel={() => { setPwPending(null); setPwOtp(""); }}
+                submitting={pwSubmitting}
+                onConfirm={() => void confirmPwOtp()}
+                onCancel={() => setPwStage("form")}
               />
             ) : null}
           </div>
@@ -292,39 +343,40 @@ export function PinSecurityPage() {
 }
 
 function OtpBox({
-  otp,
   otpInput,
   setOtpInput,
   error,
+  submitting,
   onConfirm,
   onCancel,
 }: {
-  otp: string;
   otpInput: string;
   setOtpInput: (v: string) => void;
   error: string | null;
+  submitting: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
   return (
     <div className="bg-tint border border-border-lt rounded-xl p-4 mt-4 text-[12.5px]">
-      <span className="block font-bold text-navy mb-2">Confirm with one-time password — displayed, never sent</span>
-      <div className="inline-block font-num text-[26px] font-bold tracking-widest text-navy bg-white border border-border rounded-lg px-4 py-2 my-1.5">
-        {otp}
-      </div>
-      <div>Generated in this browser and shown here so the step can be demonstrated. Nothing is transmitted.</div>
+      <span className="block font-bold text-navy mb-2">Enter the one-time code we emailed you</span>
+      <div>Check the email on file for this account — the code expires 10 minutes after it's sent, and can only be used once.</div>
       <div className="flex gap-2.5 flex-wrap items-center mt-2.5">
         <input
           value={otpInput}
-          onChange={(e) => setOtpInput(e.target.value)}
+          onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
           onKeyDown={(e) => e.key === "Enter" && onConfirm()}
+          inputMode="numeric"
+          autoComplete="off"
           className="w-[140px] font-num text-[15px] px-2.5 py-2 border border-border rounded-lg"
-          aria-label="One-time password"
+          aria-label="One-time code"
         />
-        <Btn variant="approve" onClick={onConfirm}>
-          Confirm
+        <Btn variant="approve" onClick={onConfirm} disabled={submitting}>
+          {submitting ? "Confirming…" : "Confirm"}
         </Btn>
-        <Btn onClick={onCancel}>Cancel</Btn>
+        <Btn onClick={onCancel} disabled={submitting}>
+          Cancel
+        </Btn>
       </div>
       {error ? <div className="text-neg text-xs font-semibold mt-2.5">{error}</div> : null}
     </div>

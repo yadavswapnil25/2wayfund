@@ -1,29 +1,67 @@
-import { ArrowDownRight, ArrowUpRight, Download, Printer } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ArrowDownRight, ArrowUpRight, Download, Mail, Printer } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageHead } from "../../components/ui/Flow";
-import { Field, Select } from "../../components/ui/Field";
+import { Field, Select, TextInput } from "../../components/ui/Field";
 import { Note } from "../../components/ui/Misc";
 import { StatusTag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
-import { displayMoney, formatCode } from "../../lib/format";
+import { formatCode } from "../../lib/format";
 import { isoToDisplay } from "../../lib/dates";
+import { getBalances, getTransactions } from "../../services/meService";
+import { downloadStatement, emailStatement } from "../../services/statementService";
+import { ApiError } from "../../services/apiClient";
+import type { Balance, Transaction } from "../../types/data";
 
 export function StatementsPage() {
-  const { store, balancesHidden } = useApp();
+  const { store, session } = useApp();
+  const [balances, setBalances] = useState<Balance[]>(store.balances);
+  const [transactions, setTransactions] = useState<Transaction[]>(store.transactions);
   const [currency, setCurrency] = useState("");
   const [status, setStatus] = useState("");
   const [corridor, setCorridor] = useState("");
   const [direction, setDirection] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [statementBusy, setStatementBusy] = useState<"download" | "email" | null>(null);
+  const [statementNotice, setStatementNotice] = useState<string | null>(null);
+  const [statementError, setStatementError] = useState<string | null>(null);
+
+  // Seed data renders immediately, then is quietly replaced by the real
+  // balances and transaction history once the backend responds — same
+  // pattern as Domestic (INR) and Foreign Currency.
+  const load = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!session.token) return;
+      const token = session.token;
+      try {
+        const [realBalances, realTransactions] = await Promise.all([getBalances(token, signal), getTransactions(token, signal)]);
+        setBalances(realBalances);
+        setTransactions(realTransactions);
+      } catch {
+        if (signal?.aborted) return;
+        // Best-effort — seed/last-known data stays displayed.
+      }
+    },
+    [session.token]
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
 
   const filtered = useMemo(() => {
-    return store.transactions
+    return transactions
       .filter((t) => !currency || t.currency === currency)
       .filter((t) => !status || t.status === status)
       .filter((t) => !corridor || t.corridor === corridor)
       .filter((t) => !direction || t.direction === direction)
+      .filter((t) => !fromDate || t.valueIso >= fromDate)
+      .filter((t) => !toDate || t.valueIso <= toDate)
       .slice()
       .sort((a, b) => (a.valueIso === b.valueIso ? 0 : a.valueIso < b.valueIso ? 1 : -1));
-  }, [store.transactions, currency, status, corridor, direction]);
+  }, [transactions, currency, status, corridor, direction, fromDate, toDate]);
 
   const totals = useMemo(() => {
     const toInr = (t: (typeof filtered)[number]) => (t.amount / store.rates[t.currency]) * store.rates.INR;
@@ -32,19 +70,35 @@ export function StatementsPage() {
     return { count: filtered.length, credits, debits };
   }, [filtered, store.rates]);
 
-  function downloadCsv() {
-    const header = ["Value date", "Reference", "Particulars", "Corridor", "Status", "Currency", "Amount", "Direction"];
-    const rows = filtered.map((t) => [t.valueIso, t.ref, t.description, t.corridor, t.status, t.currency, t.amount.toFixed(2), t.direction]);
-    const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\r\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "2WF-statement.csv";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const statementFilters = { currency, status, corridor, direction, from: fromDate, to: toDate };
+
+  async function handleDownload() {
+    if (statementBusy || !session.token) return;
+    setStatementError(null);
+    setStatementNotice(null);
+    setStatementBusy("download");
+    try {
+      await downloadStatement(statementFilters, session.token);
+    } catch (err) {
+      setStatementError(err instanceof ApiError ? err.message : "Could not download the statement. Please try again.");
+    } finally {
+      setStatementBusy(null);
+    }
+  }
+
+  async function handleEmail() {
+    if (statementBusy || !session.token) return;
+    setStatementError(null);
+    setStatementNotice(null);
+    setStatementBusy("email");
+    try {
+      const message = await emailStatement(statementFilters, session.token);
+      setStatementNotice(message);
+    } catch (err) {
+      setStatementError(err instanceof ApiError ? err.message : "Could not email the statement. Please try again.");
+    } finally {
+      setStatementBusy(null);
+    }
   }
 
   return (
@@ -54,57 +108,13 @@ export function StatementsPage() {
         lede="Full payment history across every ledger, with a downloadable statement and a dated receipt for each entry."
       />
 
-      {/* Statement header + ledgers */}
-      <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden mb-5">
-        <div className="flex items-center justify-between gap-3 flex-wrap px-4.5 sm:px-5 py-4 border-b border-border-lt">
-          <div>
-            <h3 className="m-0 text-[14.5px] font-bold text-navy">Account Statement</h3>
-            <p className="m-0 mt-0.5 text-[11px] text-ink-2">Generated {new Date().toLocaleString()}</p>
-          </div>
-        </div>
-
-        <div className="grid gap-2.5 sm:grid-cols-3 px-4.5 sm:px-5 py-4 border-b border-border-lt">
-          <div className="rounded-xl border border-border-lt bg-tint px-3.5 py-2.5">
-            <span className="block mb-1 text-[10.5px] uppercase text-ink-2 font-semibold">Holder</span>
-            <p className="m-0 text-[13px] font-semibold text-ink">{store.user.name}</p>
-          </div>
-          <div className="rounded-xl border border-border-lt bg-tint px-3.5 py-2.5">
-            <span className="block mb-1 text-[10.5px] uppercase text-ink-2 font-semibold">Account number</span>
-            <p className="m-0 text-[13px] font-semibold text-ink font-num">{store.user.accountNumber}</p>
-          </div>
-          <div className="rounded-xl border border-border-lt bg-tint px-3.5 py-2.5">
-            <span className="block mb-1 text-[10.5px] uppercase text-ink-2 font-semibold">Domicile</span>
-            <p className="m-0 text-[13px] font-semibold text-ink">{store.user.country}</p>
-          </div>
-        </div>
-
-        <div className="px-4.5 sm:px-5 py-3 border-b border-border-lt">
-          <h4 className="m-0 text-[12.5px] font-bold text-navy">Ledgers Covered</h4>
-        </div>
-        <div className="divide-y divide-border-lt">
-          {store.balances.map((b) => (
-            <div key={b.currency} className="flex items-center justify-between gap-3 px-4.5 sm:px-5 py-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="flex-none w-8 h-8 rounded-full bg-[#EAF1F9] text-navy text-[10.5px] font-bold flex items-center justify-center">
-                  {b.currency}
-                </span>
-                <span className="text-[12px] text-ink-2 truncate">{b.note}</span>
-              </div>
-              <span className="font-num tabular-nums font-bold text-[12.5px] text-navy flex-none">
-                {displayMoney(b.amount, b.currency, balancesHidden)}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Filters + actions */}
       <div className="bg-white border border-border-lt rounded-2xl shadow-sm px-4.5 sm:px-5 py-4 mb-5">
         <div className="flex gap-3 flex-wrap items-end">
           <Field label="Ledger" className="min-w-[140px]">
             <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
               <option value="">All ledgers</option>
-              {store.balances.map((b) => (
+              {balances.map((b) => (
                 <option key={b.currency} value={b.currency}>
                   {b.currency} ledger
                 </option>
@@ -133,22 +143,35 @@ export function StatementsPage() {
               <option value="debit">Debits only</option>
             </Select>
           </Field>
+          <Field label="From" className="min-w-[140px]">
+            <TextInput type="date" value={fromDate} max={toDate || undefined} onChange={(e) => setFromDate(e.target.value)} />
+          </Field>
+          <Field label="To" className="min-w-[140px]">
+            <TextInput type="date" value={toDate} min={fromDate || undefined} onChange={(e) => setToDate(e.target.value)} />
+          </Field>
           <span className="flex-1" />
           <button
             type="button"
-            onClick={downloadCsv}
-            className="inline-flex items-center gap-1.5 rounded-full border border-navy-dk bg-gradient-to-b from-navy-lt to-navy px-4 py-2 text-xs font-semibold text-white shadow-sm hover:brightness-110"
+            onClick={() => void handleDownload()}
+            disabled={statementBusy !== null}
+            className="inline-flex items-center gap-1.5 rounded-full border border-navy-dk bg-gradient-to-b from-navy-lt to-navy px-4 py-2 text-xs font-semibold text-white shadow-sm hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Download size={13} /> Download CSV
+            <Download size={13} /> {statementBusy === "download" ? "Preparing…" : "Download Statement"}
           </button>
           <button
             type="button"
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold text-ink hover:bg-tint"
+            onClick={() => void handleEmail()}
+            disabled={statementBusy !== null}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold text-ink hover:bg-tint disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Printer size={13} /> Print / Save as PDF
+            <Mail size={13} /> {statementBusy === "email" ? "Sending…" : "Email Statement"}
           </button>
         </div>
+
+        {statementNotice ? (
+          <p className="m-0 mt-3 text-[12px] font-semibold text-pos">{statementNotice}</p>
+        ) : null}
+        {statementError ? <p className="m-0 mt-3 text-[12px] font-semibold text-neg">{statementError}</p> : null}
       </div>
 
       {/* Stat strip */}
@@ -230,8 +253,8 @@ export function StatementsPage() {
       </div>
 
       <Note>
-        Downloads are generated in your browser from the in-memory ledger and saved straight to your device — nothing is requested from or sent
-        to a server.
+        Download Statement generates a real PDF from your account's own ledger and saves it straight to your device. Email Statement sends the
+        same PDF to the email address on file for your account — never anywhere else.
       </Note>
     </>
   );

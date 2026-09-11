@@ -1,38 +1,65 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Building2, Eye, EyeOff, Lock, User } from "lucide-react";
+import { Building2, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { Panel, PanelBody } from "../../components/ui/Panel";
-import { Field, Select, TextInput } from "../../components/ui/Field";
+import { Field, TextInput } from "../../components/ui/Field";
 import { Btn } from "../../components/ui/Button";
 import { Note } from "../../components/ui/Misc";
-import { CREDENTIALS, useApp } from "../../state/AppContext";
+import { useApp } from "../../state/AppContext";
+import { ApiError } from "../../services/apiClient";
+import { login as apiLogin } from "../../services/authService";
+
+const DEMO_EMAIL = "admin@2wayfund.org";
+const DEMO_PASSWORD = "admin1234";
+
+/** The envelope's own message is a generic "Validation failed" — the
+ * useful, specific reason (e.g. "The provided credentials are incorrect.")
+ * is nested under the offending field instead. */
+function loginErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    const firstFieldMessage = err.fieldErrors ? Object.values(err.fieldErrors)[0]?.[0] : undefined;
+    return firstFieldMessage ?? err.message;
+  }
+  return "Something went wrong. Please try again.";
+}
 
 export function AdminLoginPage() {
   const { login, recordFailure } = useApp();
   const navigate = useNavigate();
-  const [user, setUser] = useState(CREDENTIALS.admin.user);
-  const [pass, setPass] = useState(CREDENTIALS.admin.pass);
+  const [email, setEmail] = useState(DEMO_EMAIL);
+  const [pass, setPass] = useState(DEMO_PASSWORD);
   const [showPass, setShowPass] = useState(false);
-  const [role, setRole] = useState("Compliance officer");
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  function attempt() {
-    const u = user.trim();
-    const p = pass;
-    if (!u || !p) {
-      setError("Enter both a staff ID and a password.");
+  async function attempt() {
+    if (submitting) return;
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !pass) {
+      setError("Enter both a work email and a password.");
       return;
     }
-    if (u !== CREDENTIALS.admin.user || p !== CREDENTIALS.admin.pass) {
-      recordFailure();
-      setError(
-        `Those credentials do not match the demo staff account. Use ${CREDENTIALS.admin.user} / ${CREDENTIALS.admin.pass} — both are prefilled and shown below.`
-      );
-      return;
-    }
+
     setError(null);
-    login("admin", role);
-    navigate("/console");
+    setSubmitting(true);
+    try {
+      const result = await apiLogin(trimmedEmail, pass);
+
+      if (result.user.role !== "admin") {
+        recordFailure();
+        setError("This account does not have staff access. Use a Compliance or Operations login instead.");
+        return;
+      }
+
+      login("admin", result.user.staff_role ? `${result.user.name} — ${result.user.staff_role}` : result.user.name, result.token);
+      navigate("/console");
+    } catch (err) {
+      recordFailure();
+      setError(loginErrorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -49,21 +76,22 @@ export function AdminLoginPage() {
         <PanelBody>
           {error ? <Note danger className="mb-3.5">{error}</Note> : null}
 
-          <Field label="Staff ID" htmlFor="admin-user" className="mb-3.5">
+          <Field label="Work email" htmlFor="admin-email" className="mb-3.5">
             <div className="relative">
-              <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-2 pointer-events-none" />
+              <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-2 pointer-events-none" />
               <TextInput
-                id="admin-user"
+                id="admin-email"
+                type="email"
                 className="pl-9"
-                value={user}
-                onChange={(e) => setUser(e.target.value)}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 autoComplete="off"
                 spellCheck={false}
               />
             </div>
           </Field>
 
-          <Field label="Password" htmlFor="admin-pass" className="mb-3.5">
+          <Field label="Password" htmlFor="admin-pass" className="mb-4">
             <div className="relative">
               <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-2 pointer-events-none" />
               <TextInput
@@ -74,7 +102,7 @@ export function AdminLoginPage() {
                 onChange={(e) => setPass(e.target.value)}
                 autoComplete="off"
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") attempt();
+                  if (e.key === "Enter") void attempt();
                 }}
               />
               <button
@@ -88,15 +116,8 @@ export function AdminLoginPage() {
             </div>
           </Field>
 
-          <Field label="Role" htmlFor="admin-role" className="mb-4">
-            <Select id="admin-role" value={role} onChange={(e) => setRole(e.target.value)}>
-              <option>Compliance officer</option>
-              <option>Operations</option>
-            </Select>
-          </Field>
-
-          <Btn variant="block" onClick={attempt}>
-            Sign In
+          <Btn variant="block" onClick={() => void attempt()} disabled={submitting}>
+            {submitting ? "Signing in…" : "Sign In"}
           </Btn>
 
           <p className="mt-4 mb-0 text-center text-[12px]">
@@ -106,13 +127,6 @@ export function AdminLoginPage() {
           </p>
         </PanelBody>
       </Panel>
-
-      {/* <Callout title="This is a demo — nothing is transmitted" variant="info" className="mb-0">
-        <p>
-          Demo credentials are pre-filled above (<strong>{CREDENTIALS.admin.user}</strong> / <strong>{CREDENTIALS.admin.pass}</strong>). This
-          screen makes no network request — the check runs entirely in your browser.
-        </p>
-      </Callout> */}
     </>
   );
 }

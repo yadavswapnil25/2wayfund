@@ -1,9 +1,14 @@
 import { Eye, EyeOff, Copy, Check, KeyRound, Send, UserPlus, FileText, ChevronRight, Printer, LogOut, ArrowUpRight, ArrowDownRight, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { StatusTag } from "../../components/ui/Tag";
+import { Note } from "../../components/ui/Misc";
 import { useApp } from "../../state/AppContext";
-import { displayMoney, formatCode, groupInFours, monogram, MASK } from "../../lib/format";
+import { displayMoney, formatCode, groupInFours, MASK } from "../../lib/format";
+import { getBalances, getMe, getTransactions } from "../../services/meService";
+import { ApiError } from "../../services/apiClient";
+import { ProfilePhotoAvatar } from "./ProfilePhotoAvatar";
+import type { Transaction } from "../../types/data";
 
 interface CopyableDetailProps {
   label: string;
@@ -30,12 +35,46 @@ function CopyableDetail({ label, value, copied, onCopy }: CopyableDetailProps) {
 }
 
 export function AccountSummaryPage() {
-  const { store, balancesHidden, logout } = useApp();
+  const { store, setStore, session, balancesHidden, logout } = useApp();
   const [acctRevealed, setAcctRevealed] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [avatarError, setAvatarError] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  // Kept separate from the shared store — Statements, Domestic and
+  // International still read store.transactions (the seed ledger); only
+  // this page's own Recent Activity has moved over to the real backend.
+  const [transactions, setTransactions] = useState<Transaction[]>(store.transactions);
   const navigate = useNavigate();
   const { user } = store;
+
+  // The seed customer renders immediately (no blank/loading state on the
+  // page you land on right after signing in) and is then quietly replaced
+  // by whoever actually logged in — real name, real Customer ID, real
+  // balances, real transaction history — once the real backend responds.
+  useEffect(() => {
+    if (!session.token) return;
+    const controller = new AbortController();
+    const token = session.token;
+
+    (async () => {
+      try {
+        const [me, balances, txs] = await Promise.all([
+          getMe(token, controller.signal),
+          getBalances(token, controller.signal),
+          getTransactions(token, controller.signal),
+        ]);
+        setStore((s) => ({ ...s, user: { ...s.user, ...me }, balances }));
+        setTransactions(txs);
+        setLoadError(null);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setLoadError(err instanceof ApiError ? err.message : "Could not load your live account details — showing the last known data.");
+      }
+    })();
+
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.token]);
 
   async function copy(text: string, field: string) {
     try {
@@ -63,7 +102,7 @@ export function AccountSummaryPage() {
   const last4 = user.accountNumber.slice(-4);
 
   const inrLedgerTx = (() => {
-    const list = store.transactions
+    const list = transactions
       .filter((t) => t.currency === "INR")
       .slice()
       .sort((a, b) => (a.valueIso === b.valueIso ? (a.time < b.time ? 1 : -1) : a.valueIso < b.valueIso ? 1 : -1));
@@ -77,7 +116,16 @@ export function AccountSummaryPage() {
 
   return (
     <>
-     
+      {loadError ? (
+        <Note danger className="mb-3.5">
+          {loadError}
+        </Note>
+      ) : null}
+      {photoError ? (
+        <Note danger className="mb-3.5">
+          {photoError}
+        </Note>
+      ) : null}
 
       {/* Hero balance card */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0B3D42] via-[#0F5C63] to-[#17847F] text-white shadow-lg mb-4">
@@ -87,21 +135,7 @@ export function AccountSummaryPage() {
         <div className="relative px-4 sm:px-5 pt-4 pb-3.5">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="relative flex-none w-9 h-9 rounded-full border-2 border-white/40 overflow-hidden">
-                {!avatarError ? (
-                  <img
-                    src="/user.jpg"
-                    alt={user.name}
-                    className="w-full h-full object-cover"
-                    onError={() => setAvatarError(true)}
-                  />
-                ) : (
-                  <span className="w-full h-full bg-gradient-to-br from-[#E8D6A8] to-gold text-navy-dk text-[13px] font-bold flex items-center justify-center">
-                    {monogram(user.name)}
-                  </span>
-                )}
-                <span className="absolute -right-0.5 -bottom-0.5 w-2.5 h-2.5 rounded-full bg-pos border-2 border-[#0B3D42]" />
-              </span>
+              <ProfilePhotoAvatar name={user.name} onError={setPhotoError} />
               <div className="min-w-0">
                 <p className="m-0 text-[11px] text-white/60">Welcome back</p>
                 <p className="m-0 text-[14.5px] font-bold truncate">{user.name}</p>
@@ -137,7 +171,7 @@ export function AccountSummaryPage() {
             <span className="text-[10.5px] uppercase tracking-wide text-white/60 font-semibold">Available operative balance</span>
             <div className="flex items-end gap-2.5 flex-wrap mt-1">
               <span className="font-num tabular-nums text-[24px] sm:text-[28px] font-extrabold leading-none">
-                {displayMoney(inrLedger.amount, "INR", balancesHidden)}
+                {displayMoney(inrLedger.amount, inrLedger.currency, balancesHidden)}
               </span>
               <span className="mb-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase bg-white/10 border border-white/15 px-2 py-0.5 rounded-full text-white/80">
                 Cleared funds

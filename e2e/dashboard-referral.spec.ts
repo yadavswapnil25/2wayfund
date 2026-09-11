@@ -6,8 +6,11 @@ import { expect, test } from "@playwright/test";
  * so the code shown comes from the seeded store. */
 test.describe("Customer dashboard referral code", () => {
   test("shows the account's own referral code on the dashboard", async ({ page }) => {
-    await page.goto("/#/login");
-    await page.getByRole("button", { name: "Sign In", exact: true }).click();
+    await page.goto("/login");
+    // Scoped to <main> — the navbar's own "Sign In" control (a dropdown
+    // trigger for Internet Banking / Corporate Internet Banking) shares
+    // this accessible name.
+    await page.getByRole("main").getByRole("button", { name: "Sign In", exact: true }).click();
 
     const tile = page.locator("div").filter({ hasText: /^Referral code/ }).last();
     await expect(tile).toBeVisible();
