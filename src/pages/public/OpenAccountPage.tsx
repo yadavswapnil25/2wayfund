@@ -30,7 +30,7 @@ import {
   uploadApplicationBusinessCertificate,
   uploadApplicationSignature,
 } from "../../services/applicationService";
-import { verifyReferral } from "../../services/referralService";
+import { referralLookupFailureReason, verifyReferral } from "../../services/referralService";
 import {
   CAR_STATUS_OPTIONS,
   CROSS_BORDER_REASONS,
@@ -189,10 +189,15 @@ export function OpenAccountPage() {
       setVerifiedCode(verified.code);
       setStage(1);
     } catch (err) {
+      const reason = referralLookupFailureReason(err);
       setCodeError(
-        err instanceof ApiError && err.status === 404
+        reason === "invalid"
           ? "That referral code is not recognised. Check it with whoever referred you."
-          : "Could not verify that referral code right now. Please try again."
+          : reason === "expired"
+            ? "This referral code has expired. Ask whoever referred you for a fresh one."
+            : reason === "used"
+              ? "This referral code has already been used. Ask whoever referred you for a fresh one."
+              : "Could not verify that referral code right now. Please try again."
       );
     } finally {
       setVerifying(false);

@@ -14,10 +14,6 @@ export interface User {
   accountTier: string;
   segment: string;
   reference: string;
-  /** The one referral code this account owns. Unique across accounts —
-   * a code identifies exactly one customer, and this customer holds
-   * exactly one code. Issued by the backend at account provisioning. */
-  referralCode: string;
   pan: string;
   accountNumber: string;
   country: string;

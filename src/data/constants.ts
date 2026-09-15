@@ -26,6 +26,7 @@ export const ROUTES: RouteDef[] = [
     access: "customer",
   },
   { path: "/nominees", tab: "Nominees", crumb: "Transfers › Nomination", group: "Transfers", access: "customer" },
+  { path: "/referrals", tab: "Referrals", crumb: "Transfers › Referrals", group: "Transfers", access: "customer" },
   { path: "/receive", tab: null, crumb: "Transfers › Receive International Payment", group: "Transfers", access: "customer" },
   { path: "/domestic", tab: "Domestic (INR)", crumb: "Accounts › Domestic Transactions", group: "Accounts", access: "customer" },
   { path: "/international", tab: "Foreign Currency", crumb: "Accounts › International Transactions", group: "Accounts", access: "customer" },
@@ -40,6 +41,7 @@ export const ROUTES: RouteDef[] = [
   { path: "/customer-accounts", tab: "Customer Accounts", crumb: "Administration › Customer Accounts", group: "Administration", access: "admin" },
   { path: "/messages", tab: "Customer Messaging", crumb: "Administration › Customer Messaging", group: "Administration", access: "admin" },
   { path: "/admin-password", tab: "Change Password", crumb: "Administration › Change Password", group: "Administration", access: "admin" },
+  { path: "/admin-referrals", tab: "Referrals", crumb: "Administration › Referrals", group: "Administration", access: "admin" },
   // tab: null hides these from the Administration sidebar menu (Sidenav
   // only lists routes with a tab) while leaving the routes themselves reachable.
   { path: "/adjustments", tab: null, crumb: "Administration › Ledger Adjustments", group: "Administration", access: "admin" },

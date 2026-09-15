@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Copy, Check, KeyRound, Send, UserPlus, FileText, ChevronRight, Printer, LogOut, ArrowUpRight, ArrowDownRight, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Eye, EyeOff, Copy, Check, Gift, KeyRound, Send, UserPlus, FileText, ChevronRight, Printer, LogOut, ArrowUpRight, ArrowDownRight, ShieldCheck, ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { StatusTag } from "../../components/ui/Tag";
@@ -206,15 +206,19 @@ export function AccountSummaryPage() {
               copied={copiedField === "panel"}
               onCopy={() => copy(user.panelCode, "panel")}
             />
-            <CopyableDetail
-              label="Referral code"
-              value={user.referralCode}
-              copied={copiedField === "referral"}
-              onCopy={() => copy(user.referralCode, "referral")}
-            />
+            <Link
+              to="/referrals"
+              className="rounded-lg border border-gold/25 bg-[#FFFBF2] px-3 py-2 no-underline text-inherit hover:bg-gold/10 transition-colors"
+            >
+              <span className="block mb-0.5 text-[10px] uppercase text-ink-2 font-semibold">Refer &amp; earn</span>
+              <p className="m-0 flex items-center gap-1.5 font-num text-[12px] text-navy font-bold">
+                <Gift size={13} className="text-gold-dk" />
+                Generate a code
+              </p>
+            </Link>
           </div>
           <p className="m-0 mt-2 text-[10.5px] text-ink-2">
-            Your referral code is issued to this account alone — share it with anyone applying to open an account.
+            Generate a referral code and share it with anyone applying to open an account — each code is valid for 24 hours and can be used once.
           </p>
         </div>
 

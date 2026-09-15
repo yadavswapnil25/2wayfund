@@ -8,7 +8,6 @@ interface MeDto {
   account_tier: string;
   segment: string;
   reference: string;
-  referral_code: string;
   pan: string | null;
   account_number: string;
   country: string;
@@ -43,7 +42,6 @@ export async function getMe(token: string, signal?: AbortSignal): Promise<Partia
     accountTier: dto.account_tier,
     segment: dto.segment,
     reference: dto.reference,
-    referralCode: dto.referral_code,
     pan: dto.pan ?? "",
     accountNumber: dto.account_number,
     country: dto.country,

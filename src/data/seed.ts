@@ -12,9 +12,6 @@ export function createSeedStore(): Store {
       accountTier: "Master Account",
       segment: "Platinum",
       reference: "2WFMP04817",
-      // Matches this customer's row in the backend seeder
-      // (2wayfund-API database/seeders/DatabaseSeeder.php).
-      referralCode: "2WF-ADT417",
       pan: "ABCDE1234F",
       // One account number carries every transaction on the relationship.
       // Shown in full — this account belongs to the customer viewing it.
