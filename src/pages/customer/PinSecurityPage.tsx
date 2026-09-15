@@ -224,17 +224,19 @@ export function PinSecurityPage() {
 
             {pinStage === "form" ? (
               <FormGrid>
-                <Field label="Current password or 8-digit secure code" required wide error={pinErrors.auth}>
-                  <TextInput type="password" value={pinAuth} onChange={(e) => setPinAuth(e.target.value)} hasError={!!pinErrors.auth} />
+                <Field label="Current password or 8-digit secure code" htmlFor="pin-auth" required wide error={pinErrors.auth}>
+                  <TextInput id="pin-auth" type="password" value={pinAuth} onChange={(e) => setPinAuth(e.target.value)} hasError={!!pinErrors.auth} />
                 </Field>
                 <Field
                   label="New 9-digit transaction PIN"
+                  htmlFor="pin-new"
                   required
                   wide
                   error={pinErrors.new}
                   hint={!pinErrors.new ? `Must be exactly 9 numeric digits. Digits: ${pinNew.length}/9` : undefined}
                 >
                   <TextInput
+                    id="pin-new"
                     type="password"
                     inputMode="numeric"
                     maxLength={9}
@@ -244,8 +246,9 @@ export function PinSecurityPage() {
                     hasError={!!pinErrors.new}
                   />
                 </Field>
-                <Field label="Confirm new 9-digit PIN" required wide error={pinErrors.confirm}>
+                <Field label="Confirm new 9-digit PIN" htmlFor="pin-confirm" required wide error={pinErrors.confirm}>
                   <TextInput
+                    id="pin-confirm"
                     type="password"
                     inputMode="numeric"
                     maxLength={9}
@@ -294,14 +297,14 @@ export function PinSecurityPage() {
 
             {pwStage === "form" ? (
               <FormGrid>
-                <Field label="Current password or 8-digit secure code" required wide error={pwErrors.auth}>
-                  <TextInput type="password" value={pwAuth} onChange={(e) => setPwAuth(e.target.value)} hasError={!!pwErrors.auth} />
+                <Field label="Current password or 8-digit secure code" htmlFor="pw-auth" required wide error={pwErrors.auth}>
+                  <TextInput id="pw-auth" type="password" value={pwAuth} onChange={(e) => setPwAuth(e.target.value)} hasError={!!pwErrors.auth} />
                 </Field>
-                <Field label="New password" required wide error={pwErrors.new} hint={!pwErrors.new ? "Minimum 8 characters" : undefined}>
-                  <TextInput type="password" value={pwNew} onChange={(e) => setPwNew(e.target.value)} hasError={!!pwErrors.new} />
+                <Field label="New password" htmlFor="pw-new" required wide error={pwErrors.new} hint={!pwErrors.new ? "Minimum 8 characters" : undefined}>
+                  <TextInput id="pw-new" type="password" value={pwNew} onChange={(e) => setPwNew(e.target.value)} hasError={!!pwErrors.new} />
                 </Field>
-                <Field label="Confirm new password" required wide error={pwErrors.confirm}>
-                  <TextInput type="password" value={pwConfirm} onChange={(e) => setPwConfirm(e.target.value)} hasError={!!pwErrors.confirm} />
+                <Field label="Confirm new password" htmlFor="pw-confirm" required wide error={pwErrors.confirm}>
+                  <TextInput id="pw-confirm" type="password" value={pwConfirm} onChange={(e) => setPwConfirm(e.target.value)} hasError={!!pwErrors.confirm} />
                 </Field>
                 <FormActions className="flex-col items-stretch">
                   <Btn variant="block" onClick={() => void submitPw()} disabled={pwSubmitting}>
@@ -342,7 +345,9 @@ export function PinSecurityPage() {
   );
 }
 
-function OtpBox({
+/** Shared by the admin-only Change Password page too — the OTP-confirm
+ * step is identical regardless of which credential is being changed. */
+export function OtpBox({
   otpInput,
   setOtpInput,
   error,

@@ -193,3 +193,51 @@ export const PROMISE_PARAGRAPHS = [
 ];
 
 export const CLOSING_STATEMENT = "From one country to another, from one currency to another, our purpose is to help make international payments simpler.";
+
+export const LEADERSHIP_LEAD =
+  "2 Way Fund International is guided by a leadership team and governance framework built around accountability, compliance, and long-term responsibility to customers.";
+
+export const LEADERSHIP_PARAGRAPHS = [
+  "John Huke, founder of 2 Way Fund International, established the company in 2013 with a mandate to bring structure and transparency to cross-border payments. His background in international finance shaped the company's early emphasis on compliance-first product design.",
+  "The leadership team works alongside compliance, risk, and technology functions to ensure that new services are introduced responsibly, with appropriate security and regulatory review at every stage.",
+  "Governance at 2 Way Fund International is organized around clear lines of accountability: product and technology decisions are reviewed against the company's compliance and risk framework before they reach customers.",
+];
+
+export interface LeadershipMember {
+  name: string;
+  role: string;
+  bio: string;
+}
+
+export const LEADERSHIP_TEAM: LeadershipMember[] = [
+  {
+    name: "John Huke",
+    role: "Founder & Chief Executive Officer",
+    bio: "Founded 2 Way Fund International in 2013 to modernize how legitimate cross-border payments are initiated, verified, and settled.",
+  },
+  {
+    name: "Priya Nair",
+    role: "Chief Compliance Officer",
+    bio: "Leads the compliance and risk-review functions that sit behind every account approval and held transaction.",
+  },
+  {
+    name: "Governance Committee",
+    role: "Internal Oversight Body",
+    bio: "A standing internal committee that reviews new products, security controls, and significant policy changes before rollout.",
+  },
+];
+
+export const LEADERSHIP_CLOSING =
+  "Governance responsibilities are reviewed periodically to reflect the company's growth, evolving regulatory expectations, and the changing needs of an international customer base.";
+
+export interface CompanyStat {
+  value: string;
+  label: string;
+}
+
+export const COMPANY_STATS: CompanyStat[] = [
+  { value: "2013", label: "Founded" },
+  { value: "9", label: "Supported currencies" },
+  { value: "11", label: "Steps in every authorised transaction" },
+  { value: "8", label: "Security control layers" },
+];

@@ -39,6 +39,7 @@ export const ROUTES: RouteDef[] = [
   { path: "/open-customer-account", tab: "Open Account", crumb: "Administration › Open Account", group: "Administration", access: "admin" },
   { path: "/customer-accounts", tab: "Customer Accounts", crumb: "Administration › Customer Accounts", group: "Administration", access: "admin" },
   { path: "/messages", tab: "Customer Messaging", crumb: "Administration › Customer Messaging", group: "Administration", access: "admin" },
+  { path: "/admin-password", tab: "Change Password", crumb: "Administration › Change Password", group: "Administration", access: "admin" },
   // tab: null hides these from the Administration sidebar menu (Sidenav
   // only lists routes with a tab) while leaving the routes themselves reachable.
   { path: "/adjustments", tab: null, crumb: "Administration › Ledger Adjustments", group: "Administration", access: "admin" },

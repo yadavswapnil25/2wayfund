@@ -30,6 +30,7 @@ import { ComplianceConsolePage } from "./pages/admin/ComplianceConsolePage";
 import { OpenCustomerAccountPage } from "./pages/admin/OpenCustomerAccountPage";
 import { CustomerAccountsPage } from "./pages/admin/CustomerAccountsPage";
 import { MessagingPage } from "./pages/admin/MessagingPage";
+import { AdminPasswordPage } from "./pages/admin/AdminPasswordPage";
 import { AdjustmentsPage } from "./pages/admin/AdjustmentsPage";
 import { CustomerDataPage } from "./pages/admin/CustomerDataPage";
 
@@ -85,6 +86,7 @@ function AppRoutes() {
         <Route path="/open-customer-account" element={<RouteGuard><OpenCustomerAccountPage /></RouteGuard>} />
         <Route path="/customer-accounts" element={<RouteGuard><CustomerAccountsPage /></RouteGuard>} />
         <Route path="/messages" element={<RouteGuard><MessagingPage /></RouteGuard>} />
+        <Route path="/admin-password" element={<RouteGuard><AdminPasswordPage /></RouteGuard>} />
         <Route path="/adjustments" element={<RouteGuard><AdjustmentsPage /></RouteGuard>} />
         <Route path="/customer-data" element={<RouteGuard><CustomerDataPage /></RouteGuard>} />
 

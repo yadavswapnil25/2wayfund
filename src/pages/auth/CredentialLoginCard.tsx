@@ -8,21 +8,7 @@ import { Note } from "../../components/ui/Misc";
 import { useApp } from "../../state/AppContext";
 import { ApiError } from "../../services/apiClient";
 import { login as apiLogin } from "../../services/authService";
-import { LOGIN_NOTICE_KEY } from "../../data/constants";
-
-/** Read-and-clear: a notice set by a page that signed the customer out on
- * purpose (e.g. right after a password change) should only ever show
- * once, on the very next login screen — not linger for a later, unrelated
- * sign-in in the same tab. */
-function takeLoginNotice(): string | null {
-  try {
-    const notice = sessionStorage.getItem(LOGIN_NOTICE_KEY);
-    if (notice) sessionStorage.removeItem(LOGIN_NOTICE_KEY);
-    return notice;
-  } catch {
-    return null;
-  }
-}
+import { takeLoginNotice } from "../../lib/loginNotice";
 
 interface CredentialLoginCardProps {
   icon: LucideIcon;
@@ -86,7 +72,7 @@ export function CredentialLoginCard({
 
       if (result.user.role !== "customer") {
         recordFailure();
-        setError("This is a staff account — use Staff Sign In instead.");
+        setError("This is a staff account — use Staff Log In instead.");
         return;
       }
 
@@ -158,7 +144,7 @@ export function CredentialLoginCard({
         </Field>
 
         <Btn variant="block" onClick={() => void attempt()} disabled={submitting}>
-          {submitting ? "Signing in…" : "Sign In"}
+          {submitting ? "Logging in…" : "Log In"}
         </Btn>
 
         {footer}

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
-import { Check, Compass, Gauge, Lightbulb, Scale, ShieldCheck, Smile, Sparkles } from "lucide-react";
+import { Check, Compass, Gauge, Lightbulb, Scale, ShieldCheck, Smile, Sparkles, UserCog } from "lucide-react";
 import { PageHead, Chain, Flow } from "../../components/ui/Flow";
 import { Panel, PanelBody, PanelHead } from "../../components/ui/Panel";
 import { Callout, KV } from "../../components/ui/Misc";
@@ -11,6 +11,7 @@ import {
   COMPANY_FACTS,
   COMPANY_HISTORY,
   COMPANY_INTRO,
+  COMPANY_STATS,
   COMPANY_TAGLINE,
   CROSS_BORDER_PARAGRAPHS,
   CURRENCY_CONVERSION_INTRO,
@@ -23,6 +24,10 @@ import {
   GLOBAL_BASE_CLOSING,
   GLOBAL_BASE_PARAGRAPHS,
   JOURNEY_MILESTONES,
+  LEADERSHIP_CLOSING,
+  LEADERSHIP_LEAD,
+  LEADERSHIP_PARAGRAPHS,
+  LEADERSHIP_TEAM,
   PAYMENT_CORRIDOR,
   PAYMENT_MODEL_CLOSING,
   PAYMENT_MODEL_STEPS,
@@ -139,6 +144,15 @@ export function CompanyPage() {
         </PanelBody>
       </Panel>
 
+      <div className="grid gap-4 mb-4 grid-cols-2 lg:grid-cols-4">
+        {COMPANY_STATS.map((s) => (
+          <div key={s.label} className="bg-white border border-border-lt rounded-lg p-4.5 text-center shadow-sm">
+            <span className="block text-[26px] font-bold text-navy leading-none mb-1.5">{s.value}</span>
+            <span className="block text-[11px] text-ink-2 leading-snug">{s.label}</span>
+          </div>
+        ))}
+      </div>
+
       <Section title="How We Started">
         <Paragraphs items={[COMPANY_HISTORY]} />
       </Section>
@@ -200,6 +214,24 @@ export function CompanyPage() {
       <Section title="Serving a Global Customer Base">
         <Paragraphs items={GLOBAL_BASE_PARAGRAPHS} />
         <p className="m-0 mt-2.5 text-[12.5px] font-semibold text-ink">{GLOBAL_BASE_CLOSING}</p>
+      </Section>
+
+      <Section title="Leadership & Governance">
+        <p className="m-0 mb-2.5 text-[13px] font-semibold text-navy">{LEADERSHIP_LEAD}</p>
+        <Paragraphs items={LEADERSHIP_PARAGRAPHS} />
+        <div className="grid gap-4 mt-3.5 sm:grid-cols-3">
+          {LEADERSHIP_TEAM.map((m) => (
+            <div key={m.name} className="border border-border-lt rounded-lg p-4">
+              <div className="w-9 h-9 rounded-lg mb-2.5 bg-gradient-to-br from-[#E8D6A8] to-gold text-navy-dk flex items-center justify-center">
+                <UserCog size={17} />
+              </div>
+              <h3 className="text-[13px] mb-0.5">{m.name}</h3>
+              <p className="m-0 mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gold-dk">{m.role}</p>
+              <p className="m-0 text-xs text-ink-2 leading-relaxed">{m.bio}</p>
+            </div>
+          ))}
+        </div>
+        <p className="m-0 mt-3.5 text-xs text-ink-2 leading-relaxed">{LEADERSHIP_CLOSING}</p>
       </Section>
 
       <Panel>

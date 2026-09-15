@@ -38,34 +38,83 @@ function FeatureCard({ icon: Icon, title, body }: Feature) {
   );
 }
 
+/** A decorative wireframe-globe-and-payment-network graphic for the hero
+ * panel. Purely illustrative (aria-hidden) — the site has no photography
+ * anywhere, so every visual is built from the same icon/gradient/SVG
+ * language already used for the dashboard hero cards and decorative
+ * blur circles. */
+function GlobalNetworkGraphic() {
+  return (
+    <svg viewBox="0 0 280 280" className="absolute -right-8 -bottom-10 w-[280px] h-[280px] opacity-90" aria-hidden="true">
+      <circle cx="140" cy="140" r="110" stroke="white" strokeOpacity="0.15" fill="none" />
+      <ellipse cx="140" cy="140" rx="110" ry="40" stroke="white" strokeOpacity="0.12" fill="none" />
+      <ellipse cx="140" cy="140" rx="40" ry="110" stroke="white" strokeOpacity="0.12" fill="none" />
+      <ellipse cx="140" cy="140" rx="110" ry="72" stroke="white" strokeOpacity="0.08" fill="none" />
+      <path d="M70,90 Q140,58 200,70" stroke="#D9AF57" strokeOpacity="0.55" strokeWidth="1.5" fill="none" strokeDasharray="4 4" />
+      <path d="M200,70 Q234,128 220,180" stroke="#D9AF57" strokeOpacity="0.55" strokeWidth="1.5" fill="none" strokeDasharray="4 4" />
+      <path d="M220,180 Q162,222 90,210" stroke="#D9AF57" strokeOpacity="0.55" strokeWidth="1.5" fill="none" strokeDasharray="4 4" />
+      <path d="M90,210 Q56,150 70,90" stroke="#D9AF57" strokeOpacity="0.55" strokeWidth="1.5" fill="none" strokeDasharray="4 4" />
+      <circle cx="70" cy="90" r="4" fill="#D9AF57" />
+      <circle cx="200" cy="70" r="4" fill="#D9AF57" />
+      <circle cx="90" cy="210" r="4" fill="#D9AF57" />
+      <circle cx="220" cy="180" r="5" fill="#D9AF57">
+        <animate attributeName="r" values="5;7;5" dur="2.4s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="1;0.6;1" dur="2.4s" repeatCount="indefinite" />
+      </circle>
+    </svg>
+  );
+}
+
+/** Every currency the platform's ledgers support, shown as a connected
+ * row of badges — reuses store.rates (the same source the rates table
+ * above draws from) rather than hardcoding a second currency list. */
+function SupportedCurrencies({ codes }: { codes: CurrencyCode[] }) {
+  return (
+    <div className="relative flex flex-wrap justify-center gap-x-2 gap-y-5 py-2">
+      <div className="hidden sm:block absolute left-8 right-8 top-[26px] h-px bg-border-lt" aria-hidden="true" />
+      {codes.map((code) => (
+        <div key={code} className="relative flex flex-col items-center gap-1.5 px-2.5">
+          <span className="w-13 h-13 rounded-full bg-gradient-to-br from-[#E8D6A8] to-gold text-navy-dk font-bold text-[12px] flex items-center justify-center border-4 border-white shadow-sm">
+            {code}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function HomePage() {
   const { store } = useApp();
+  const supportedCurrencies = Object.keys(store.rates) as CurrencyCode[];
 
   return (
     <>
       <div className="grid gap-5.5 mb-5.5 lg:grid-cols-[1.55fr_1fr] items-stretch">
-        <div className="bg-gradient-to-br from-[#1E4570] via-navy to-navy-dk text-white rounded-[10px] p-8.5 shadow-md">
-          <p className="m-0 mb-3 text-[11px] font-bold tracking-[0.13em] uppercase text-gold">2 Way Fund International</p>
-          <h1 className="text-white! text-[31px] leading-tight tracking-tight mb-4 max-w-[22ch]">
-            Connecting Countries. Converting Currencies. Enabling Global Payments.
-          </h1>
-          <p className="m-0 mb-5.5 text-[14px] leading-[1.7] text-white/85 max-w-[52ch]">
-            A design prototype for a multi-currency NetBanking platform — international payments, currency exchange, cards and account
-            services, built as a system-design case study. Fictional entity, fictional data, no real financial service.
-          </p>
-          <div className="flex flex-wrap gap-2.5">
-            <Link
-              to="/open-account"
-              className="inline-block px-5.5 py-3 rounded-[5px] text-[13.5px] font-bold no-underline bg-gradient-to-b from-[#D9AF57] to-gold text-navy-dk border border-gold-dk hover:brightness-105"
-            >
-              Apply for an Account
-            </Link>
-            <Link
-              to="/login"
-              className="inline-block px-5.5 py-3 rounded-[5px] text-[13.5px] font-bold no-underline bg-transparent text-white border border-white/50 hover:bg-white/10"
-            >
-              Sign In
-            </Link>
+        <div className="relative overflow-hidden bg-gradient-to-br from-[#1E4570] via-navy to-navy-dk text-white rounded-[10px] p-8.5 shadow-md">
+          <GlobalNetworkGraphic />
+          <div className="relative">
+            <p className="m-0 mb-3 text-[11px] font-bold tracking-[0.13em] uppercase text-gold">2 Way Fund International</p>
+            <h1 className="text-white! text-[31px] leading-tight tracking-tight mb-4 max-w-[22ch]">
+              Connecting Countries. Converting Currencies. Enabling Global Payments.
+            </h1>
+            <p className="m-0 mb-5.5 text-[14px] leading-[1.7] text-white/85 max-w-[52ch]">
+              A design prototype for a multi-currency NetBanking platform — international payments, currency exchange, cards and account
+              services, built as a system-design case study. Fictional entity, fictional data, no real financial service.
+            </p>
+            <div className="flex flex-wrap gap-2.5">
+              <Link
+                to="/open-account"
+                className="inline-block px-5.5 py-3 rounded-[5px] text-[13.5px] font-bold no-underline bg-gradient-to-b from-[#D9AF57] to-gold text-navy-dk border border-gold-dk hover:brightness-105"
+              >
+                Apply for an Account
+              </Link>
+              <Link
+                to="/login"
+                className="inline-block px-5.5 py-3 rounded-[5px] text-[13.5px] font-bold no-underline bg-transparent text-white border border-white/50 hover:bg-white/10"
+              >
+                Log In
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -95,6 +144,13 @@ export function HomePage() {
           <FeatureCard key={f.title} {...f} />
         ))}
       </div>
+
+      <Panel>
+        <PanelHead title="Currencies We Support" note={`${supportedCurrencies.length} ledgers, one account number`} />
+        <PanelBody>
+          <SupportedCurrencies codes={supportedCurrencies} />
+        </PanelBody>
+      </Panel>
 
       <Callout title="Security by Design" className="mb-5.5">
         <p>

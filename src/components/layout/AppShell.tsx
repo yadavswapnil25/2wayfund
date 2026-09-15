@@ -7,11 +7,12 @@ import { Breadcrumbs, SessionBar } from "./Breadcrumbs";
 import { Sidenav } from "./Sidenav";
 import { Footer } from "./Footer";
 
-// "/corporate-login" is deliberately not here — unlike the other auth
-// screens it's a wide two-column layout (form + informational panels), not
-// a narrow centered card, so it keeps the ordinary breadcrumb/full-width
-// treatment every other public page gets.
-const AUTH_PATHS = ["/login", "/admin-login", "/register-account", "/denied"];
+// "/login", "/corporate-login" and "/register-account" are deliberately
+// not here — unlike the other auth screens they're a wide two-column
+// layout (form + informational panels), not a narrow centered card, so
+// they keep the ordinary breadcrumb/full-width treatment every other
+// public page gets.
+const AUTH_PATHS = ["/admin-login", "/denied"];
 
 export function AppShell() {
   const { session } = useApp();
@@ -22,8 +23,12 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Brandbar onToggleNav={() => setNavOpen((v) => !v)} />
-      {!signedIn ? <PubNav /> : null}
+      {/* Signed-out visitors get PubNav alone — it carries its own logo
+          on the same row as Home/About Us/etc, so a separate Brandbar
+          row above it would just duplicate the logo. Brandbar is only
+          the dashboard topbar (profile, notifications, logout) once
+          someone's actually signed in. */}
+      {signedIn ? <Brandbar onToggleNav={() => setNavOpen((v) => !v)} /> : <PubNav />}
       <SessionBar />
       {!isAuthPage ? <Breadcrumbs /> : null}
 

@@ -1,12 +1,61 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { KeyRound, ShieldCheck, UserCheck } from "lucide-react";
-import { Panel, PanelBody } from "../../components/ui/Panel";
+import { Panel, PanelBody, PanelHead } from "../../components/ui/Panel";
 import { Field, TextInput } from "../../components/ui/Field";
 import { Btn } from "../../components/ui/Button";
-import { Note } from "../../components/ui/Misc";
+import { Callout, Note } from "../../components/ui/Misc";
+import { NumberedList } from "../../components/ui/Prose";
 import { ApiError } from "../../services/apiClient";
 import { confirmRegistrationOtp, verifyRegistrationIdentity } from "../../services/registrationService";
+
+const REGISTRATION_STEPS = [
+  {
+    title: "Gather your account-opening details",
+    desc: "Have your Customer ID / User ID, Aadhaar or PAN number, bank account number, and the 8-digit secure code you were given when the account was opened.",
+  },
+  {
+    title: "Verify your identity",
+    desc: "Enter all four details on this page. They are checked against the account our team opened for you.",
+  },
+  {
+    title: "Enter the emailed one-time code",
+    desc: "A 6-digit code is sent to the email on file for the account. It expires 10 minutes after it's sent and can be resent if needed.",
+  },
+  {
+    title: "Choose your NetBanking password",
+    desc: "Once the code is confirmed, you'll set the password used to sign in from now on.",
+  },
+  {
+    title: "Log in to Internet Banking",
+    desc: "Use your Customer ID and the password you just chose to access your account, transfers and cards.",
+  },
+];
+
+/** The side panel explaining the registration flow — kept local to this
+ * page since, unlike LoginInfoPanel, none of this content is shared with
+ * another screen. */
+function RegistrationManual() {
+  return (
+    <div>
+      <Panel>
+        <PanelHead title="How to Register" note="5 steps" />
+        <PanelBody>
+          <NumberedList items={REGISTRATION_STEPS} />
+        </PanelBody>
+      </Panel>
+
+      <Callout title="Registering vs. opening a new account">
+        This page is only for activating online access to an account our team has <strong>already opened</strong> for you. If you don't have an
+        account yet,{" "}
+        <Link to="/open-account" className="font-semibold text-navy">
+          apply for one here
+        </Link>
+        .
+      </Callout>
+    </div>
+  );
+}
 
 /** The envelope's own message is generic — the useful, specific reason is
  * nested under the offending field instead (matches AdminLoginPage). */
@@ -88,102 +137,112 @@ export function RegisterAccountPage() {
   }
 
   return (
-    <>
-      <div className="text-center mb-5">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-b from-navy-lt to-navy text-white mb-3 shadow-sm">
-          {stage === "identity" ? <UserCheck size={24} /> : <ShieldCheck size={24} />}
+    <div className="grid gap-5.5 items-start lg:grid-cols-[440px_minmax(0,1fr)]">
+      <div>
+        <div className="text-center mb-5">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-b from-navy-lt to-navy text-white mb-3 shadow-sm">
+            {stage === "identity" ? <UserCheck size={24} /> : <ShieldCheck size={24} />}
+          </div>
+          <h1 className="text-[19px] font-bold text-navy mb-1">Register for Online Access</h1>
+          <p className="m-0 text-[12.5px] text-ink-2">
+            {stage === "identity"
+              ? "For an account already opened for you by our team. Enter the details given to you at account opening."
+              : "Enter the one-time code just emailed to the address on file for this account."}
+          </p>
         </div>
-        <h1 className="text-[19px] font-bold text-navy mb-1">Register for Online Access</h1>
-        <p className="m-0 text-[12.5px] text-ink-2">
-          {stage === "identity"
-            ? "For an account already opened for you by our team. Enter the details given to you at account opening."
-            : "Enter the one-time code just emailed to the address on file for this account."}
-        </p>
-      </div>
 
-      <Panel className="mb-4">
-        <PanelBody>
-          {error ? <Note danger className="mb-3.5">{error}</Note> : null}
-          {notice && !error ? <Note className="mb-3.5">{notice}</Note> : null}
+        <Panel className="mb-4">
+          <PanelBody>
+            {error ? <Note danger className="mb-3.5">{error}</Note> : null}
+            {notice && !error ? <Note className="mb-3.5">{notice}</Note> : null}
 
-          {stage === "identity" ? (
-            <>
-              <Field label="Customer ID / User ID" htmlFor="reg-reference" className="mb-3.5">
-                <TextInput id="reg-reference" value={reference} onChange={(e) => setReference(e.target.value)} autoComplete="off" spellCheck={false} />
-              </Field>
+            {stage === "identity" ? (
+              <>
+                <Field label="Customer ID / User ID" htmlFor="reg-reference" className="mb-3.5">
+                  <TextInput id="reg-reference" value={reference} onChange={(e) => setReference(e.target.value)} autoComplete="off" spellCheck={false} />
+                </Field>
 
-              <Field label="Aadhaar or PAN Number" htmlFor="reg-id-number" className="mb-3.5">
-                <TextInput id="reg-id-number" value={idNumber} onChange={(e) => setIdNumber(e.target.value)} autoComplete="off" spellCheck={false} />
-              </Field>
+                <Field label="Aadhaar or PAN Number" htmlFor="reg-id-number" className="mb-3.5">
+                  <TextInput id="reg-id-number" value={idNumber} onChange={(e) => setIdNumber(e.target.value)} autoComplete="off" spellCheck={false} />
+                </Field>
 
-              <Field label="Bank Account Number" htmlFor="reg-account-number" className="mb-3.5">
-                <TextInput id="reg-account-number" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} autoComplete="off" spellCheck={false} />
-              </Field>
-
-              <Field label="8-Digit Secure Code" htmlFor="reg-secure-code" hint="Given to you when your account was opened." className="mb-4">
-                <div className="relative">
-                  <KeyRound size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-2 pointer-events-none" />
+                <Field label="Bank Account Number" htmlFor="reg-account-number" className="mb-3.5">
                   <TextInput
-                    id="reg-secure-code"
-                    className="pl-9"
-                    value={secureCode}
-                    onChange={(e) => setSecureCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                    id="reg-account-number"
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                </Field>
+
+                <Field label="8-Digit Secure Code" htmlFor="reg-secure-code" hint="Given to you when your account was opened." className="mb-4">
+                  <div className="relative">
+                    <KeyRound size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-2 pointer-events-none" />
+                    <TextInput
+                      id="reg-secure-code"
+                      className="pl-9"
+                      value={secureCode}
+                      onChange={(e) => setSecureCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                      inputMode="numeric"
+                      autoComplete="off"
+                      onKeyDown={(e) => e.key === "Enter" && void submitIdentity()}
+                    />
+                  </div>
+                </Field>
+
+                <Btn variant="block" onClick={() => void submitIdentity()} disabled={submitting}>
+                  {submitting ? "Verifying…" : "Verify & Send Code"}
+                </Btn>
+              </>
+            ) : (
+              <>
+                <Field label="One-Time Code" htmlFor="reg-otp" hint="6 digits, expires 10 minutes after it's sent." className="mb-4">
+                  <TextInput
+                    id="reg-otp"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                     inputMode="numeric"
                     autoComplete="off"
-                    onKeyDown={(e) => e.key === "Enter" && void submitIdentity()}
+                    onKeyDown={(e) => e.key === "Enter" && void submitOtp()}
                   />
-                </div>
-              </Field>
+                </Field>
 
-              <Btn variant="block" onClick={() => void submitIdentity()} disabled={submitting}>
-                {submitting ? "Verifying…" : "Verify & Send Code"}
-              </Btn>
-            </>
-          ) : (
-            <>
-              <Field label="One-Time Code" htmlFor="reg-otp" hint="6 digits, expires 10 minutes after it's sent." className="mb-4">
-                <TextInput
-                  id="reg-otp"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  inputMode="numeric"
-                  autoComplete="off"
-                  onKeyDown={(e) => e.key === "Enter" && void submitOtp()}
-                />
-              </Field>
+                <Btn variant="block" onClick={() => void submitOtp()} disabled={submitting}>
+                  {submitting ? "Confirming…" : "Confirm Code"}
+                </Btn>
 
-              <Btn variant="block" onClick={() => void submitOtp()} disabled={submitting}>
-                {submitting ? "Confirming…" : "Confirm Code"}
-              </Btn>
+                <p className="mt-3 mb-0 text-center text-[12px]">
+                  <button type="button" onClick={() => void resendOtp()} disabled={submitting} className="font-semibold text-navy underline disabled:opacity-50">
+                    Resend code
+                  </button>
+                  {" · "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStage("identity");
+                      setOtp("");
+                      setError(null);
+                      setNotice(null);
+                    }}
+                    className="font-semibold text-ink-2 underline"
+                  >
+                    Start over
+                  </button>
+                </p>
+              </>
+            )}
 
-              <p className="mt-3 mb-0 text-center text-[12px]">
-                <button type="button" onClick={() => void resendOtp()} disabled={submitting} className="font-semibold text-navy underline disabled:opacity-50">
-                  Resend code
-                </button>
-                {" · "}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStage("identity");
-                    setOtp("");
-                    setError(null);
-                    setNotice(null);
-                  }}
-                  className="font-semibold text-ink-2 underline"
-                >
-                  Start over
-                </button>
-              </p>
-            </>
-          )}
+            <p className="mt-4 mb-0 text-center text-[12px]">
+              <Link to="/login" className="font-semibold text-navy">
+                Already registered? Log in
+              </Link>
+            </p>
+          </PanelBody>
+        </Panel>
+      </div>
 
-          <p className="mt-4 mb-0 text-center text-[12px]">
-            <Link to="/login" className="font-semibold text-navy">
-              Already registered? Sign in
-            </Link>
-          </p>
-        </PanelBody>
-      </Panel>
-    </>
+      <RegistrationManual />
+    </div>
   );
 }

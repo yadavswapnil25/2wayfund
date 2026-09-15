@@ -10,10 +10,10 @@ test.describe("Customer dashboard referral code", () => {
     await page.goto("/login");
     await page.getByLabel("Customer ID").fill("2WFMP04817");
     await page.getByRole("textbox", { name: "Password" }).fill("demo1234");
-    // Scoped to <main> — the navbar's own "Sign In" control (a dropdown
+    // Scoped to <main> — the navbar's own "Log In" control (a dropdown
     // trigger for Internet Banking / Corporate Internet Banking) shares
     // this accessible name.
-    await page.getByRole("main").getByRole("button", { name: "Sign In", exact: true }).click();
+    await page.getByRole("main").getByRole("button", { name: "Log In", exact: true }).click();
 
     const tile = page.locator("div").filter({ hasText: /^Referral code/ }).last();
     await expect(tile).toBeVisible();

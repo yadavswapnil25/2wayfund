@@ -8,6 +8,7 @@ import { Note } from "../../components/ui/Misc";
 import { useApp } from "../../state/AppContext";
 import { ApiError } from "../../services/apiClient";
 import { login as apiLogin } from "../../services/authService";
+import { takeLoginNotice } from "../../lib/loginNotice";
 
 /** The envelope's own message is a generic "Validation failed" — the
  * useful, specific reason (e.g. "The provided credentials are incorrect.")
@@ -23,6 +24,7 @@ function loginErrorMessage(err: unknown): string {
 export function AdminLoginPage() {
   const { login, recordFailure } = useApp();
   const navigate = useNavigate();
+  const [notice] = useState(takeLoginNotice);
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -65,12 +67,13 @@ export function AdminLoginPage() {
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-b from-navy-lt to-navy text-white mb-3 shadow-sm">
           <Building2 size={24} />
         </div>
-        <h1 className="text-[19px] font-bold text-navy mb-1">Staff Sign In</h1>
+        <h1 className="text-[19px] font-bold text-navy mb-1">Staff Log In</h1>
         <p className="m-0 text-[12.5px] text-ink-2">Back-office access for compliance and operations.</p>
       </div>
 
       <Panel className="mb-4">
         <PanelBody>
+          {notice ? <div className="bg-[#F0F8F3] border border-[#A8D4BB] rounded-xl p-3.5 mb-3.5 text-[12.5px] text-ink">{notice}</div> : null}
           {error ? <Note danger className="mb-3.5">{error}</Note> : null}
 
           <Field label="Work email" htmlFor="admin-email" className="mb-3.5">
@@ -116,7 +119,7 @@ export function AdminLoginPage() {
           </Field>
 
           <Btn variant="block" onClick={() => void attempt()} disabled={submitting}>
-            {submitting ? "Signing in…" : "Sign In"}
+            {submitting ? "Logging in…" : "Log In"}
           </Btn>
 
           <p className="mt-4 mb-0 text-center text-[12px]">

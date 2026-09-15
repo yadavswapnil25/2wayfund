@@ -101,14 +101,14 @@ export function SetPasswordPage() {
           icon={CheckCircle2}
           accentClass="bg-gradient-to-b from-[#2C9159] to-[#1C7A46]"
           title="Password Set"
-          subtitle={`Your account is ready. Sign in with ${email} and the password you just chose.`}
+          subtitle={`Your account is ready. Log in with ${email} and the password you just chose.`}
         />
         <PanelBody className="text-center">
           <Link
             to="/login"
             className="inline-flex items-center gap-1.5 rounded-full border border-navy-dk bg-gradient-to-b from-navy-lt to-navy px-4 py-2 text-xs font-semibold text-white no-underline hover:brightness-110"
           >
-            Continue to Sign In →
+            Continue to Log In →
           </Link>
         </PanelBody>
       </Panel>
