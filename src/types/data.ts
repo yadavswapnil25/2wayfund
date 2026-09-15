@@ -26,6 +26,11 @@ export interface User {
   branch: string;
   panelCode: string;
   dailyDomesticLimit: number;
+  /** Set by staff via the Compliance Console's "Block Transfers" control —
+   * scoped to Transfer Funds only, so it never affects login or any other
+   * account action. */
+  transfersBlocked: boolean;
+  transfersBlockedReason: string | null;
   pin: string;
   pinStatus: string;
   kycStatus: string;

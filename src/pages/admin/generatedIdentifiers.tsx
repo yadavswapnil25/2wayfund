@@ -24,7 +24,7 @@ export function generateAccountNumber(): string {
 
 export function generatePanelCode(country: string): string {
   const letters = country.replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase().padEnd(2, "X");
-  return `PNL-${letters || "XX"}-${randomDigits(4)}`;
+  return `PNL${letters || "XX"}${randomDigits(4)}`;
 }
 
 export function generatePin(): string {

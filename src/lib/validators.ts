@@ -4,10 +4,11 @@
 export const SWIFT_FORMAT = /^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/;
 export const IFSC_FORMAT = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 
-// Same shape as this account's own panelCode ("PNL-IN-4817") — an internal
+// Same shape as this account's own panelCode ("PNLIN4817") — an internal
 // beneficiary is another 2 Way Fund customer, so their panel number
-// follows the institution's one convention.
-export const PANEL_CODE_FORMAT = /^PNL-[A-Z]{2}-\d{4}$/;
+// follows the institution's one convention. Alphanumeric only, no spaces
+// or separators.
+export const PANEL_CODE_FORMAT = /^PNL[A-Z]{2}\d{4}$/;
 
 export const REFERRAL_FORMAT = /^2WF-[A-Z0-9]{6}$/;
 

@@ -169,7 +169,7 @@ export function BeneficiariesPage() {
       setErr("bf-panelcode", "Enter the assigned panel number.");
       ok = false;
     } else if (!PANEL_CODE_FORMAT.test(p)) {
-      setErr("bf-panelcode", "Panel numbers follow the form PNL-XX-0000.");
+      setErr("bf-panelcode", "Panel numbers follow the form PNLXX0000.");
       ok = false;
     } else setErr("bf-panelcode", null);
     setPanelCode(p);
@@ -326,7 +326,7 @@ export function BeneficiariesPage() {
                         <TextInput value={intAccount} onChange={(e) => setIntAccount(e.target.value)} placeholder="e.g. 902200118855" hasError={!!errors["bf-internal-acct"]} />
                       </Field>
                       <Field label="Assigned panel number" required error={errors["bf-panelcode"]}>
-                        <TextInput value={panelCode} onChange={(e) => setPanelCode(e.target.value)} placeholder="e.g. PNL-IN-4402" hasError={!!errors["bf-panelcode"]} />
+                        <TextInput value={panelCode} onChange={(e) => setPanelCode(e.target.value)} placeholder="e.g. PNLIN4402" hasError={!!errors["bf-panelcode"]} />
                       </Field>
                       <Field label="Customer ID (CIF)" required error={errors["bf-cif"]}>
                         <TextInput value={cif} onChange={(e) => setCif(e.target.value)} placeholder="e.g. 2WFMP04817" hasError={!!errors["bf-cif"]} />

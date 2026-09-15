@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Wallet } from "lucide-react";
 import { Field, Select, TextInput } from "../../components/ui/Field";
+import { DatePicker } from "../../components/ui/DatePicker";
 import { Btn } from "../../components/ui/Button";
 import { Callout } from "../../components/ui/Misc";
 import { creditCustomerAccount, listCustomerBalances, type CustomerBalance } from "../../services/adminAccountService";
 import { ApiError } from "../../services/apiClient";
 import { formatCode } from "../../lib/format";
+import { todayIso } from "../../lib/dates";
 import type { CurrencyCode } from "../../types/data";
 
 const CURRENCIES: CurrencyCode[] = ["USD", "EUR", "INR", "GBP", "CAD", "JPY", "AUD", "SGD", "CHF"];
@@ -28,9 +30,10 @@ export function AddFundsPanel({ userId, token }: { userId: number; token: string
   const [currency, setCurrency] = useState<CurrencyCode | null>(null);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [valueDate, setValueDate] = useState(todayIso());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [credited, setCredited] = useState<{ currency: CurrencyCode; newBalance: number } | null>(null);
+  const [credited, setCredited] = useState<{ currency: CurrencyCode; newBalance: number; valueDate: string } | null>(null);
 
   const loadBalances = useCallback(
     async (signal?: AbortSignal) => {
@@ -66,13 +69,24 @@ export function AddFundsPanel({ userId, token }: { userId: number; token: string
       setError("Enter an amount greater than zero.");
       return;
     }
+    const effectiveValueDate = valueDate || todayIso();
 
     setSubmitting(true);
     try {
-      const result = await creditCustomerAccount(userId, { currency: effectiveCurrency, amount: numeric, note: note.trim() || undefined }, token);
-      setCredited(result);
+      const result = await creditCustomerAccount(
+        userId,
+        {
+          currency: effectiveCurrency,
+          amount: numeric,
+          note: note.trim() || undefined,
+          valueDate: effectiveValueDate !== todayIso() ? effectiveValueDate : undefined,
+        },
+        token
+      );
+      setCredited({ ...result, valueDate: effectiveValueDate });
       setAmount("");
       setNote("");
+      setValueDate(todayIso());
       void loadBalances();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not add funds. Please try again.");
@@ -105,6 +119,12 @@ export function AddFundsPanel({ userId, token }: { userId: number; token: string
         <Callout title="Funds credited" className="mb-3">
           <p>
             New {credited.currency} balance: <strong>{formatCode(credited.newBalance, credited.currency)}</strong>
+            {credited.valueDate !== todayIso() ? (
+              <>
+                {" "}
+                — posted with value date <strong>{credited.valueDate}</strong>
+              </>
+            ) : null}
           </p>
         </Callout>
       ) : null}
@@ -142,6 +162,11 @@ export function AddFundsPanel({ userId, token }: { userId: number; token: string
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
             />
+          </div>
+        </Field>
+        <Field label="Value date" htmlFor={`fund-date-${userId}`} className="mb-0">
+          <div className="w-[150px]">
+            <DatePicker id={`fund-date-${userId}`} value={valueDate} onChange={setValueDate} max={todayIso()} />
           </div>
         </Field>
         <Field label="Note (optional)" htmlFor={`fund-note-${userId}`} className="mb-0 flex-1 min-w-[180px]">

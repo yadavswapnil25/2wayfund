@@ -24,9 +24,6 @@ function takeLoginNotice(): string | null {
   }
 }
 
-const DEMO_CUSTOMER_ID = "2WFMP04817";
-const DEMO_PASSWORD = "demo1234";
-
 interface CredentialLoginCardProps {
   icon: LucideIcon;
   accentClass: string;
@@ -67,8 +64,8 @@ export function CredentialLoginCard({
   const { login, recordFailure } = useApp();
   const navigate = useNavigate();
   const [notice] = useState(takeLoginNotice);
-  const [customerId, setCustomerId] = useState(DEMO_CUSTOMER_ID);
-  const [pass, setPass] = useState(DEMO_PASSWORD);
+  const [customerId, setCustomerId] = useState("");
+  const [pass, setPass] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -127,6 +124,7 @@ export function CredentialLoginCard({
               className="pl-9"
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
+              placeholder="e.g. 2WFMP04817"
               autoComplete="off"
               spellCheck={false}
             />
@@ -142,6 +140,7 @@ export function CredentialLoginCard({
               className="pl-9 pr-9"
               value={pass}
               onChange={(e) => setPass(e.target.value)}
+              placeholder="Enter your password"
               autoComplete="off"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void attempt();

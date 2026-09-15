@@ -65,10 +65,10 @@ export function TransferReceiptPanel({ receipt, balancesHidden, onOpenVoucher, o
             than Completed. A reviewer adjudicates it before settlement.
           </Note>
         ) : null}
-        <Note danger className="mt-2">
+        {/* <Note danger className="mt-2">
           2 Way Fund International is a fictional institution created for this design prototype — no real bank, no real funds. The debit and
           ledger entry above are real within this demonstration account.
-        </Note>
+        </Note> */}
 
         <div className="flex items-center gap-2.5 flex-wrap border-t border-border-lt pt-4 mt-4">
           <button

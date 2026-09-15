@@ -9,9 +9,6 @@ import { useApp } from "../../state/AppContext";
 import { ApiError } from "../../services/apiClient";
 import { login as apiLogin } from "../../services/authService";
 
-const DEMO_EMAIL = "admin@2wayfund.org";
-const DEMO_PASSWORD = "admin1234";
-
 /** The envelope's own message is a generic "Validation failed" — the
  * useful, specific reason (e.g. "The provided credentials are incorrect.")
  * is nested under the offending field instead. */
@@ -26,8 +23,8 @@ function loginErrorMessage(err: unknown): string {
 export function AdminLoginPage() {
   const { login, recordFailure } = useApp();
   const navigate = useNavigate();
-  const [email, setEmail] = useState(DEMO_EMAIL);
-  const [pass, setPass] = useState(DEMO_PASSWORD);
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -85,6 +82,7 @@ export function AdminLoginPage() {
                 className="pl-9"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                placeholder="e.g. name@2wayfund.org"
                 autoComplete="off"
                 spellCheck={false}
               />
@@ -100,6 +98,7 @@ export function AdminLoginPage() {
                 className="pl-9 pr-9"
                 value={pass}
                 onChange={(e) => setPass(e.target.value)}
+                placeholder="Enter your password"
                 autoComplete="off"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") void attempt();

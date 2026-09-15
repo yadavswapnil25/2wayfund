@@ -17,6 +17,8 @@ interface MeDto {
   branch: string;
   panel_code: string;
   daily_domestic_limit: string | number;
+  transfers_blocked: boolean;
+  transfers_blocked_reason: string | null;
   pin_status: string;
   kyc_status: string;
   has_photo: boolean;
@@ -50,6 +52,8 @@ export async function getMe(token: string, signal?: AbortSignal): Promise<Partia
     branch: dto.branch,
     panelCode: dto.panel_code,
     dailyDomesticLimit: Number(dto.daily_domestic_limit),
+    transfersBlocked: dto.transfers_blocked,
+    transfersBlockedReason: dto.transfers_blocked_reason,
     pinStatus: dto.pin_status,
     kycStatus: dto.kyc_status,
     hasPhoto: dto.has_photo,

@@ -22,11 +22,11 @@ interface CopyableDetailProps {
  * customer already looking at it. */
 function CopyableDetail({ label, value, copied, onCopy }: CopyableDetailProps) {
   return (
-    <div className="rounded-lg border border-white/15 bg-white/8 px-3 py-2 backdrop-blur-sm">
-      <span className="block mb-0.5 text-[10px] uppercase text-white/55 font-semibold">{label}</span>
-      <p className="m-0 flex items-center gap-1.5 text-[13px]">
+    <div className="rounded-lg border border-gold/25 bg-[#FFFBF2] px-3 py-2">
+      <span className="block mb-0.5 text-[10px] uppercase text-ink-2 font-semibold">{label}</span>
+      <p className="m-0 flex items-center gap-1.5 text-[12px] text-navy">
         <span>{value}</span>
-        <button type="button" onClick={onCopy} className="text-white/60 hover:text-white" title={`Copy ${label}`}>
+        <button type="button" onClick={onCopy} className="text-ink-2 hover:text-gold-dk" title={`Copy ${label}`}>
           {copied ? <Check size={12} /> : <Copy size={12} />}
         </button>
       </p>
@@ -129,26 +129,26 @@ export function AccountSummaryPage() {
       ) : null}
 
       {/* Hero balance card */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0B3D42] via-[#0F5C63] to-[#17847F] text-white shadow-lg mb-4">
-        <div className="pointer-events-none absolute -top-20 -right-14 w-56 h-56 rounded-full bg-gold/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -left-12 w-52 h-52 rounded-full bg-white/10 blur-3xl" />
+      <div className="relative overflow-hidden rounded-2xl bg-white border border-gold/25 text-ink shadow-lg mb-4">
+        <div className="pointer-events-none absolute -top-20 -right-14 w-56 h-56 rounded-full bg-gold/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 -left-12 w-52 h-52 rounded-full bg-[#F6E7BC]/50 blur-3xl" />
 
         <div className="relative px-4 sm:px-5 pt-4 pb-3.5">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2.5 min-w-0">
               <ProfilePhotoAvatar name={user.name} onError={setPhotoError} />
               <div className="min-w-0">
-                <p className="m-0 text-[11px] text-white/60">Welcome back</p>
-                <p className="m-0 text-[14.5px] font-bold truncate">{user.name}</p>
+                <p className="m-0 text-[11px] text-ink-2">Welcome back</p>
+                <p className="m-0 text-[14.5px] font-bold text-navy truncate">{user.name}</p>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                   <span
                     className={`inline-flex items-center gap-1 text-[9.5px] font-bold uppercase tracking-wide border px-1.75 py-0.5 rounded-full ${
-                      kycVerified ? "bg-white/15 text-white border-white/20" : "bg-gold/20 text-gold border-gold/30"
+                      kycVerified ? "bg-[#EFF8F2] text-pos border-[#A8D4BB]" : "bg-gold/15 text-gold-dk border-gold/30"
                     }`}
                   >
                     {kycVerified ? <ShieldCheck size={10} /> : <ShieldAlert size={10} />} {kycVerified ? "KYC Verified" : "KYC Pending"}
                   </span>
-                  <span className="text-[9.5px] font-bold uppercase tracking-wide bg-white/10 text-white/80 border border-white/15 px-1.75 py-0.5 rounded-full">
+                  <span className="text-[9.5px] font-bold uppercase tracking-wide bg-gold/12 text-gold-dk border border-gold/30 px-1.75 py-0.5 rounded-full">
                     {user.accountTier}
                   </span>
                 </div>
@@ -158,14 +158,14 @@ export function AccountSummaryPage() {
               <button
                 type="button"
                 onClick={() => navigate("/pin-security")}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-white/20 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-[#FFFBF2] px-3 py-1.5 text-[11px] font-semibold text-navy hover:bg-gold/10 transition-colors"
               >
                 <KeyRound size={12} /> 9-Digit PIN
               </button>
               <button
                 type="button"
                 onClick={logout}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-white/20 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-[#FFFBF2] px-3 py-1.5 text-[11px] font-semibold text-navy hover:bg-gold/10 transition-colors"
               >
                 <LogOut size={12} /> Log Out
               </button>
@@ -173,26 +173,23 @@ export function AccountSummaryPage() {
           </div>
 
           <div className="mt-4">
-            <span className="text-[10.5px] uppercase tracking-wide text-white/60 font-semibold">Available operative balance</span>
+            <span className="text-[10.5px] uppercase tracking-wide text-ink-2 font-semibold">Available operative balance</span>
             <div className="flex items-end gap-2.5 flex-wrap mt-1">
-              <span className="font-num tabular-nums text-[24px] sm:text-[28px] font-extrabold leading-none">
+              <span className="font-num tabular-nums text-[19px] sm:text-[22px] font-extrabold leading-none text-gold-dk">
                 {displayMoney(inrLedger.amount, inrLedger.currency, balancesHidden)}
-              </span>
-              <span className="mb-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase bg-white/10 border border-white/15 px-2 py-0.5 rounded-full text-white/80">
-                Cleared funds
               </span>
             </div>
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 mt-3.5">
-            <div className="rounded-lg border border-white/15 bg-white/8 px-3 py-2 backdrop-blur-sm">
-              <span className="block mb-0.5 text-[10px] uppercase text-white/55 font-semibold">Account number</span>
-              <p className="m-0 flex items-center gap-1.5 font-num text-[13px]">
+            <div className="rounded-lg border border-gold/25 bg-[#FFFBF2] px-3 py-2">
+              <span className="block mb-0.5 text-[10px] uppercase text-ink-2 font-semibold">Account number</span>
+              <p className="m-0 flex items-center gap-1.5 font-num text-[12px] text-navy">
                 <span>{acctRevealed ? groupInFours(user.accountNumber) : `${MASK} ${MASK} ${last4}`}</span>
-                <button type="button" onClick={() => setAcctRevealed((v) => !v)} className="text-white/60 hover:text-white" title="Show / hide">
+                <button type="button" onClick={() => setAcctRevealed((v) => !v)} className="text-ink-2 hover:text-gold-dk" title="Show / hide">
                   {acctRevealed ? <EyeOff size={12} /> : <Eye size={12} />}
                 </button>
-                <button type="button" onClick={() => copy(user.accountNumber, "acct")} className="text-white/60 hover:text-white" title="Copy">
+                <button type="button" onClick={() => copy(user.accountNumber, "acct")} className="text-ink-2 hover:text-gold-dk" title="Copy">
                   {copiedField === "acct" ? <Check size={12} /> : <Copy size={12} />}
                 </button>
               </p>
@@ -216,18 +213,18 @@ export function AccountSummaryPage() {
               onCopy={() => copy(user.referralCode, "referral")}
             />
           </div>
-          <p className="m-0 mt-2 text-[10.5px] text-white/55">
+          <p className="m-0 mt-2 text-[10.5px] text-ink-2">
             Your referral code is issued to this account alone — share it with anyone applying to open an account.
           </p>
         </div>
 
-        <div className="relative border-t border-white/10 bg-black/15 px-4 sm:px-5 py-2.5 flex items-center justify-between gap-3 flex-wrap text-[11px] text-white/70">
+        <div className="relative border-t border-gold/20 bg-[#FFFBF2] px-4 sm:px-5 py-2.5 flex items-center justify-between gap-3 flex-wrap text-[11px] text-ink-2">
           <span>
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-pos mr-1.5" />
             Electronic clearing enabled: IMPS, NEFT, RTGS, 2WF Direct
           </span>
           <span>
-            Daily transfer limit: <strong className="text-white">{formatCode(user.dailyDomesticLimit, "INR")}</strong>
+            Daily transfer limit: <strong className="text-navy">{formatCode(user.dailyDomesticLimit, "INR")}</strong>
           </span>
         </div>
       </div>

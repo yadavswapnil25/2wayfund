@@ -46,7 +46,7 @@ export function ProfilePhotoAvatar({ name, onError }: { name: string; onError: (
 
   return (
     <>
-      <span className="relative flex-none w-9 h-9 rounded-full border-2 border-white/40 overflow-hidden">
+      <span className="relative flex-none w-9 h-9 rounded-full border-2 border-gold/40 overflow-hidden">
         {photoUrl ? (
           <img src={photoUrl} alt={name} className="w-full h-full object-cover" />
         ) : (
@@ -68,7 +68,7 @@ export function ProfilePhotoAvatar({ name, onError }: { name: string; onError: (
             <Camera size={13} />
           )}
         </button>
-        <span className="absolute -right-0.5 -bottom-0.5 w-2.5 h-2.5 rounded-full bg-pos border-2 border-[#0B3D42] pointer-events-none" />
+        <span className="absolute -right-0.5 -bottom-0.5 w-2.5 h-2.5 rounded-full bg-pos border-2 border-white pointer-events-none" />
       </span>
       <input
         ref={inputRef}

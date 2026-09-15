@@ -2,11 +2,14 @@ import { expect, test } from "@playwright/test";
 
 /** The referral code is the customer's own — it must be on their
  * dashboard, in full and copyable, on every visit. Runs against the
- * frontend only: the customer session is still the prefilled demo login,
- * so the code shown comes from the seeded store. */
+ * frontend only: logs in as the seeded demo customer (login pages no
+ * longer prefill credentials), so the code shown comes from the seeded
+ * store. */
 test.describe("Customer dashboard referral code", () => {
   test("shows the account's own referral code on the dashboard", async ({ page }) => {
     await page.goto("/login");
+    await page.getByLabel("Customer ID").fill("2WFMP04817");
+    await page.getByRole("textbox", { name: "Password" }).fill("demo1234");
     // Scoped to <main> — the navbar's own "Sign In" control (a dropdown
     // trigger for Internet Banking / Corporate Internet Banking) shares
     // this accessible name.

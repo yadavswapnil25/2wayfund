@@ -37,7 +37,7 @@ export function Footer() {
         <p className="m-0">
           Most pages here run entirely in your browser and make no network requests. Opening an account submits your application to a
           demonstration backend for this case study — no real account is opened, no funds are collected and no identity documents are
-          requested. Authentication is mocked with credentials printed on the login screens — never enter a real password into a prototype.
+          requested. Authentication is mocked — never enter a real password into a prototype.
         </p>
       </div>
     </footer>

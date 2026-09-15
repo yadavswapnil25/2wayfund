@@ -402,7 +402,7 @@ export function OpenAccountPage() {
   return (
     <>
       <PageHead
-        title="Open an Account"
+        title="Apply for an account"
         lede="All seven stages of account opening, walked through in order — from referral verification to the live account."
       />
 

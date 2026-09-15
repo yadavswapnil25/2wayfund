@@ -61,6 +61,8 @@ export interface CustomerAccountDto {
   aadhaar: string | null;
   kyc_status: string;
   pin_status: string;
+  transfers_blocked: boolean;
+  transfers_blocked_reason: string | null;
   last_login_at: string | null;
   created_at: string | null;
 }
@@ -185,16 +187,44 @@ export interface CreditAccountResult {
  * this is its first credit. Staff only, hence the token. */
 export async function creditCustomerAccount(
   userId: number,
-  payload: { currency: CurrencyCode; amount: number; note?: string },
+  payload: { currency: CurrencyCode; amount: number; note?: string; valueDate?: string },
   token: string
 ): Promise<CreditAccountResult> {
   const dto = await apiFetch<CreditAccountDto>(`/admin/accounts/${userId}/credit`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ currency: payload.currency, amount: payload.amount, note: payload.note }),
+    body: JSON.stringify({ currency: payload.currency, amount: payload.amount, note: payload.note, value_date: payload.valueDate || undefined }),
   });
 
   return { currency: dto.balance.currency, newBalance: Number(dto.balance.amount) };
+}
+
+interface TransferBlockDto {
+  transfers_blocked: boolean;
+  transfers_blocked_reason: string | null;
+}
+
+export interface TransferBlockStatus {
+  blocked: boolean;
+  reason: string | null;
+}
+
+/** The Compliance Console's "Block Transfers" control — instantly blocks
+ * or unblocks a customer's ability to send a fund transfer. Scoped to
+ * Transfer Funds only; every other customer action is unaffected. Staff
+ * only, hence the token. */
+export async function updateCustomerTransferBlock(
+  userId: number,
+  payload: { blocked: boolean; reason?: string },
+  token: string
+): Promise<TransferBlockStatus> {
+  const dto = await apiFetch<TransferBlockDto>(`/admin/accounts/${userId}/transfer-block`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ blocked: payload.blocked, reason: payload.reason }),
+  });
+
+  return { blocked: dto.transfers_blocked, reason: dto.transfers_blocked_reason };
 }
 
 /** A card is provisioned and maintained by the institution — the

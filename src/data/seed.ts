@@ -23,8 +23,10 @@ export function createSeedStore(): Store {
       ifsc: "TWFD0004409",
       micr: "110022099",
       branch: "Central Electronic Hub",
-      panelCode: "PNL-IN-4817",
+      panelCode: "PNLIN4817",
       dailyDomesticLimit: 1000000,
+      transfersBlocked: false,
+      transfersBlockedReason: null,
       // Never displayed anywhere in the UI — only its presence/status is
       // shown — and changed in place by the 9-Digit PIN & Security page.
       pin: "418200773",

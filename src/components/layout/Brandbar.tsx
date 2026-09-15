@@ -28,11 +28,11 @@ export function Brandbar({ onToggleNav }: { onToggleNav: () => void }) {
             <img
               src="/logo.png"
               alt="2 Way Fund International"
-              className="h-11 w-11 rounded-lg object-contain flex-none"
+              className="h-20 w-20 rounded-lg object-contain flex-none"
               onError={() => setLogoError(true)}
             />
           ) : (
-            <div className="h-11 w-11 rounded-lg bg-navy text-white font-bold text-[13px] flex items-center justify-center flex-none">
+            <div className="h-20 w-20 rounded-lg bg-navy text-white font-bold text-[15px] flex items-center justify-center flex-none">
               2WF
             </div>
           )}

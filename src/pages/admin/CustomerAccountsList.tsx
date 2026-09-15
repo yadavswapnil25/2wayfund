@@ -11,6 +11,7 @@ import { listCustomerAccounts, type AccountListMeta, type CustomerAccountDto } f
 import { ApiError } from "../../services/apiClient";
 import { AddFundsPanel } from "./AddFundsPanel";
 import { CardsPanel } from "./CardsPanel";
+import { TransferBlockPanel } from "./TransferBlockPanel";
 
 /** Every customer account — however it was provisioned (an approved
  * application or the "Open Account" tool) — with search and paging, the
@@ -153,6 +154,7 @@ export function CustomerAccountsList({ refreshSignal = 0 }: { refreshSignal?: nu
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-num font-bold text-[13px] text-navy">{a.reference}</span>
                       <Tag variant={a.kyc_status === "Verified" ? "approved" : "review"}>{a.kyc_status}</Tag>
+                      {a.transfers_blocked ? <Tag variant="rejected">Transfers blocked</Tag> : null}
                     </div>
                     <p className="m-0 mt-0.5 text-[12px] text-ink">
                       {a.name} · {a.account_tier}
@@ -193,6 +195,21 @@ export function CustomerAccountsList({ refreshSignal = 0 }: { refreshSignal?: nu
                     </div>
                     {session.token ? <AddFundsPanel userId={a.id} token={session.token} /> : null}
                     {session.token ? <CardsPanel userId={a.id} token={session.token} /> : null}
+                    {session.token ? (
+                      <TransferBlockPanel
+                        userId={a.id}
+                        token={session.token}
+                        blocked={a.transfers_blocked}
+                        reason={a.transfers_blocked_reason}
+                        onChange={(status) =>
+                          setAccounts((prev) =>
+                            prev.map((acc) =>
+                              acc.id === a.id ? { ...acc, transfers_blocked: status.blocked, transfers_blocked_reason: status.reason } : acc
+                            )
+                          )
+                        }
+                      />
+                    ) : null}
                   </div>
                 ) : null}
               </div>

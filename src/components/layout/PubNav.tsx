@@ -153,12 +153,12 @@ export function PubNav() {
           >
             Register for Netbanking
           </Link>
-          <Link
+          {/* <Link
             to="/open-account"
             className="inline-block px-4 py-2 rounded-[5px] text-[12.5px] font-bold no-underline bg-gradient-to-b from-[#D9AF57] to-gold text-navy-dk border border-gold-dk"
           >
             Apply for an Account
-          </Link>
+          </Link> */}
         </div>
       </div>
 
