@@ -30,7 +30,7 @@ export function PinSecurityPage() {
   const navigate = useNavigate();
 
   // The shared store only reflects the real, logged-in customer once
-  // some page has fetched /me — normally the Account & Passbook page, but
+  // some page has fetched /me — normally the Account Overview page, but
   // a customer can land here first (direct link, bookmark). Refreshing it
   // here too means the PIN status badge is never a stale leftover from
   // whoever was last shown in this browser tab.

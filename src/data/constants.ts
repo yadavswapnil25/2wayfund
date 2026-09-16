@@ -15,7 +15,7 @@ export const ROUTES: RouteDef[] = [
   { path: "/set-password", tab: null, crumb: "Set Your Password", access: "public" },
   { path: "/register-account", tab: null, crumb: "Register for Online Access", access: "public" },
   { path: "/denied", tab: null, crumb: "Access Denied", access: "public" },
-  { path: "/", tab: "Account & Passbook", crumb: "Accounts › Account & Passbook", group: "Accounts", access: "customer" },
+  { path: "/", tab: "Account Overview", crumb: "Accounts › Account Overview", group: "Accounts", access: "customer" },
   { path: "/transfer", tab: "Transfer Funds", crumb: "Transfers › Transfer Funds", group: "Transfers", access: "customer" },
   { path: "/beneficiaries", tab: "Beneficiaries", crumb: "Transfers › Manage Beneficiaries", group: "Transfers", access: "customer" },
   {

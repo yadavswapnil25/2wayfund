@@ -2,7 +2,7 @@ import { ArrowDownRight, ArrowUpRight, Download, Mail, Printer } from "lucide-re
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageHead } from "../../components/ui/Flow";
 import { Field, Select, TextInput } from "../../components/ui/Field";
-import { Note } from "../../components/ui/Misc";
+import { LoadingBlock, Note } from "../../components/ui/Misc";
 import { StatusTag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
 import { formatCode } from "../../lib/format";
@@ -14,8 +14,8 @@ import type { Balance, Transaction } from "../../types/data";
 
 export function StatementsPage() {
   const { store, session } = useApp();
-  const [balances, setBalances] = useState<Balance[]>(store.balances);
-  const [transactions, setTransactions] = useState<Transaction[]>(store.transactions);
+  const [balances, setBalances] = useState<Balance[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [currency, setCurrency] = useState("");
   const [status, setStatus] = useState("");
   const [corridor, setCorridor] = useState("");
@@ -25,21 +25,27 @@ export function StatementsPage() {
   const [statementBusy, setStatementBusy] = useState<"download" | "email" | null>(null);
   const [statementNotice, setStatementNotice] = useState<string | null>(null);
   const [statementError, setStatementError] = useState<string | null>(null);
+  // Never renders seed balances/transactions — nothing shows until the
+  // real ledgers and history actually come back, success or failure.
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Seed data renders immediately, then is quietly replaced by the real
-  // balances and transaction history once the backend responds — same
-  // pattern as Domestic (INR) and Foreign Currency.
   const load = useCallback(
     async (signal?: AbortSignal) => {
-      if (!session.token) return;
+      if (!session.token) {
+        setLoadError("Your session has no API token — sign out and sign back in.");
+        return;
+      }
       const token = session.token;
       try {
         const [realBalances, realTransactions] = await Promise.all([getBalances(token, signal), getTransactions(token, signal)]);
         setBalances(realBalances);
         setTransactions(realTransactions);
-      } catch {
+        setLoadError(null);
+        setLoaded(true);
+      } catch (err) {
         if (signal?.aborted) return;
-        // Best-effort — seed/last-known data stays displayed.
+        setLoadError(err instanceof ApiError ? err.message : "Could not load your statements. Please try again.");
       }
     },
     [session.token]
@@ -108,6 +114,16 @@ export function StatementsPage() {
         lede="Full payment history across every ledger, with a downloadable statement and a dated receipt for each entry."
       />
 
+      {!loaded ? (
+        loadError ? (
+          <Note danger className="mb-5">
+            {loadError}
+          </Note>
+        ) : (
+          <LoadingBlock label="Loading your statements…" />
+        )
+      ) : (
+      <>
       {/* Filters + actions */}
       <div className="bg-white border border-border-lt rounded-2xl shadow-sm px-4.5 sm:px-5 py-4 mb-5">
         <div className="flex gap-3 flex-wrap items-end">
@@ -251,6 +267,8 @@ export function StatementsPage() {
           </div>
         )}
       </div>
+      </>
+      )}
 
       <Note>
         Download Statement generates a real PDF from your account's own ledger and saves it straight to your device. Email Statement sends the

@@ -3,7 +3,7 @@ import { UserPlus } from "lucide-react";
 import { PageHead } from "../../components/ui/Flow";
 import { Field, FormActions, FormGrid, Select, TextArea, TextInput } from "../../components/ui/Field";
 import { Btn } from "../../components/ui/Button";
-import { Chip, Note } from "../../components/ui/Misc";
+import { Chip, LoadingBlock, Note } from "../../components/ui/Misc";
 import { useApp } from "../../state/AppContext";
 import type { Nominee, NomineeAuditEntry } from "../../types/data";
 import { ageOn, todayIso } from "../../lib/dates";
@@ -51,8 +51,12 @@ function applyFieldErrors(err: unknown, setErr: (id: string, msg: string | null)
 
 export function NomineesPage() {
   const { store, session } = useApp();
-  const [nominees, setNominees] = useState<Nominee[]>(store.nominees);
-  const [nomineeAudit, setNomineeAudit] = useState<NomineeAuditEntry[]>(store.nomineeAudit);
+  // Never renders seed nominees/audit — nothing shows until the real data
+  // actually comes back, since whether the "one nominee already
+  // registered" block applies depends entirely on the real list.
+  const [nominees, setNominees] = useState<Nominee[] | null>(null);
+  const [nomineeAudit, setNomineeAudit] = useState<NomineeAuditEntry[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -71,17 +75,22 @@ export function NomineesPage() {
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
 
   const minor = isMinorDob(dob);
-  const blocked = nominees.length > 0 && !editingId;
+  const blocked = (nominees?.length ?? 0) > 0 && !editingId;
 
   const refresh = useCallback(
     async (signal?: AbortSignal) => {
-      if (!session.token) return;
+      if (!session.token) {
+        setLoadError("Your session has no API token — sign out and sign back in.");
+        return;
+      }
       try {
         const [realNominees, realAudit] = await Promise.all([listNominees(session.token, signal), listNomineeAudit(session.token, signal)]);
         setNominees(realNominees);
         setNomineeAudit(realAudit);
-      } catch {
-        // Best-effort — the seed/last-known data stays displayed.
+        setLoadError(null);
+      } catch (err) {
+        if (signal?.aborted) return;
+        setLoadError(err instanceof ApiError ? err.message : "Could not load your nominee details. Please try again.");
       }
     },
     [session.token],
@@ -238,6 +247,15 @@ export function NomineesPage() {
         lede="Register who receives the balance on your accounts. Nomination applies across the whole relationship, and only one nominee can be registered at a time."
       />
 
+      {nominees === null ? (
+        loadError ? (
+          <Note danger className="mb-5">
+            {loadError}
+          </Note>
+        ) : (
+          <LoadingBlock label="Loading your nomination details…" />
+        )
+      ) : (
       <div className="grid gap-5 mb-5 items-start min-[1001px]:grid-cols-2">
         {/* Add / update nominee */}
         <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
@@ -382,8 +400,9 @@ export function NomineesPage() {
 
         <NomineeDirectory nominees={nominees} editingId={editingId} submitting={submitting} onEdit={startEdit} onRemove={(id) => void removeNominee(id)} />
       </div>
+      )}
 
-      <NomineeHistory entries={nomineeAudit} />
+      {nominees !== null ? <NomineeHistory entries={nomineeAudit} /> : null}
     </>
   );
 }

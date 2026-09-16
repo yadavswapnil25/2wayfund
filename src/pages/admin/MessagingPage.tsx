@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Send, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Search, Send, Trash2, X } from "lucide-react";
 import { PageHead } from "../../components/ui/Flow";
 import { Field, FormActions, FormGrid, Select, TextArea, TextInput } from "../../components/ui/Field";
 import { Btn } from "../../components/ui/Button";
@@ -7,10 +7,13 @@ import { Tag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
 import { MSG_TEMPLATES } from "../../data/constants";
 import { stamp } from "../../lib/dates";
+import { listCustomerAccounts, type CustomerAccountDto } from "../../services/adminAccountService";
+import { ApiError } from "../../services/apiClient";
 import type { Message } from "../../types/data";
 
-function recipientLabel(to: string, userName: string): string {
-  return to === "all" ? "All customers" : userName;
+function recipientLabel(to: string, directory: Record<string, CustomerAccountDto>): string {
+  if (to === "all") return "All customers";
+  return directory[to]?.name ?? "Former customer";
 }
 
 export function MessagingPage() {
@@ -25,6 +28,50 @@ export function MessagingPage() {
   const [errors, setErrors] = useState<Record<string, string | null>>({});
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
 
+  // Never renders a fabricated single-customer recipient list — nothing
+  // shows in the dropdown until the real customer directory actually
+  // comes back, success or failure (matches CustomerAccountsList). The
+  // backend only ever returns 10 accounts per page, so `results` is just
+  // the current search's matches (all 40+ customers, searched server-side
+  // by email) — not "every customer". `directory` separately accumulates
+  // every customer ever seen across searches, so a message sent to
+  // someone earlier still resolves to their real name later even after
+  // the search box has moved on to a different query.
+  const [recipientQuery, setRecipientQuery] = useState("");
+  const [results, setResults] = useState<CustomerAccountDto[] | null>(null);
+  const [directory, setDirectory] = useState<Record<string, CustomerAccountDto>>({});
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const token = session.token;
+    if (!token) {
+      setLoadError("Your session has no API token — sign out and sign back in.");
+      return;
+    }
+    const handle = setTimeout(() => {
+      void listCustomerAccounts(token, { email: recipientQuery.trim() || undefined }, controller.signal)
+        .then((result) => {
+          setResults(result.items);
+          setDirectory((prev) => {
+            const next = { ...prev };
+            for (const c of result.items) next[String(c.id)] = c;
+            return next;
+          });
+          setLoadError(null);
+        })
+        .catch((err) => {
+          if (controller.signal.aborted) return;
+          setLoadError(err instanceof ApiError ? err.message : "Could not load the customer directory. Please try again.");
+        });
+    }, recipientQuery ? 350 : 0);
+
+    return () => {
+      clearTimeout(handle);
+      controller.abort();
+    };
+  }, [session.token, recipientQuery]);
+
   function applyTemplate(idx: string) {
     setTemplateIdx(idx);
     const t = MSG_TEMPLATES[Number(idx)];
@@ -37,6 +84,7 @@ export function MessagingPage() {
 
   function clearForm() {
     setTo("all");
+    setRecipientQuery("");
     setCategory(store.messageCategories[0] ?? "");
     setPriority("Normal");
     setTemplateIdx("0");
@@ -66,7 +114,7 @@ export function MessagingPage() {
     };
     setStore((s) => ({ ...s, messages: [message, ...s.messages] }));
     setConfirmMsg(
-      `Delivered to ${recipientLabel(to, store.user.name)} and now visible in their inbox. Delivery is in-app only — no email, SMS or push notification was dispatched.`
+      `Delivered to ${recipientLabel(to, directory)} and now visible in their inbox. Delivery is in-app only — no email, SMS or push notification was dispatched.`
     );
     clearForm();
   }
@@ -99,12 +147,51 @@ export function MessagingPage() {
           ) : null}
 
           <FormGrid>
-            <Field label="Recipient">
-              <Select value={to} onChange={(e) => setTo(e.target.value)}>
+            <Field
+              label="Recipient"
+              hint={
+                loadError ??
+                (recipientQuery && results !== null
+                  ? `${results.length} match${results.length === 1 ? "" : "es"} for "${recipientQuery}" — searches by email across every customer.`
+                  : undefined)
+              }
+            >
+              <div className="relative mb-1.5">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-2 pointer-events-none" />
+                <TextInput
+                  type="text"
+                  placeholder="Search all customers by email…"
+                  value={recipientQuery}
+                  onChange={(e) => setRecipientQuery(e.target.value)}
+                  className="pl-8 pr-8"
+                />
+                {recipientQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => setRecipientQuery("")}
+                    aria-label="Clear recipient search"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-2 hover:text-navy"
+                  >
+                    <X size={14} />
+                  </button>
+                ) : null}
+              </div>
+              <Select value={to} onChange={(e) => setTo(e.target.value)} disabled={results === null}>
                 <option value="all">All customers</option>
-                <option value={store.user.id}>
-                  {store.user.name} ({store.user.reference})
-                </option>
+                {/* Keeps the current selection visible even once a new
+                    search narrows it out of `results` — otherwise picking
+                    someone, then searching again, silently blanks the
+                    dropdown while `to` still (correctly) points at them. */}
+                {to !== "all" && directory[to] && !results?.some((c) => String(c.id) === to) ? (
+                  <option value={to}>
+                    {directory[to].name} ({directory[to].reference})
+                  </option>
+                ) : null}
+                {(results ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.reference})
+                  </option>
+                ))}
               </Select>
             </Field>
             <Field label="Category">
@@ -166,7 +253,7 @@ export function MessagingPage() {
                     <Tag variant={m.read ? "approved" : "review"}>{m.read ? "Read" : "Unread"}</Tag>
                   </div>
                   <p className="m-0 mt-0.5 text-[11px] text-ink-2 truncate">
-                    {recipientLabel(m.to, store.user.name)} · {m.category} · {m.sentAt}
+                    {recipientLabel(m.to, directory)} · {m.category} · {m.sentAt}
                   </p>
                   <p className="m-0 mt-0.5 text-[11px] text-ink-2 truncate">{m.body.split("\n")[0]}</p>
                 </div>

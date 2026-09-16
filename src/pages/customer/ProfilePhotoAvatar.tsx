@@ -8,7 +8,7 @@ import { ApiError } from "../../services/apiClient";
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // 5 MB, matching the backend's own limit (UpdateMyPhotoRequest).
 const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-/** The customer's own avatar in the Account & Passbook hero card, with a
+/** The customer's own avatar in the Account Overview hero card, with a
  * click-to-change control. Reads/writes the same shared photoUrl the
  * header (Brandbar) reads from, so both update together the moment a new
  * photo is saved — there's only ever one fetch, one source of truth.

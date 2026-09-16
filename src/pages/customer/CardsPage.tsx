@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState, type MouseEvent } from "react";
 import { RotateCw, ShieldCheck, Wifi } from "lucide-react";
 import { PageHead } from "../../components/ui/Flow";
 import { Tag } from "../../components/ui/Tag";
-import { Note } from "../../components/ui/Misc";
+import { LoadingBlock, Note } from "../../components/ui/Misc";
 import { useApp } from "../../state/AppContext";
 import { formatCode } from "../../lib/format";
 import { listCards } from "../../services/cardService";
 import { getMe } from "../../services/meService";
+import { ApiError } from "../../services/apiClient";
 import type { Card } from "../../types/data";
 
 function fundingLabel(c: Card): string {
@@ -154,19 +155,24 @@ function FlippableCard({ c, holder }: { c: Card; holder: string }) {
 
 export function CardsPage() {
   const { store, setStore, session } = useApp();
-  const [cards, setCards] = useState<Card[]>(store.cards);
+  // Never renders seed cards — nothing shows until the real card list
+  // actually comes back, success or failure.
+  const [cards, setCards] = useState<Card[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadCards = useCallback(
     async (signal?: AbortSignal) => {
-      if (!session.token) return;
+      if (!session.token) {
+        setLoadError("Your session has no API token — sign out and sign back in.");
+        return;
+      }
       try {
         const real = await listCards(session.token, signal);
         setCards(real);
         setLoadError(null);
-      } catch {
+      } catch (err) {
         if (signal?.aborted) return;
-        // Best-effort — the seed/last-known cards stay displayed.
+        setLoadError(err instanceof ApiError ? err.message : "Could not load your cards. Please try again.");
       }
     },
     [session.token],
@@ -180,14 +186,15 @@ export function CardsPage() {
   useEffect(() => {
     const controller = new AbortController();
     const token = session.token;
-    if (!token) return;
 
     void loadCards(controller.signal);
-    void getMe(token, controller.signal)
-      .then((me) => setStore((s) => ({ ...s, user: { ...s.user, ...me } })))
-      .catch(() => {
-        // Best-effort — the seed/last-known cardholder name stays displayed.
-      });
+    if (token) {
+      void getMe(token, controller.signal)
+        .then((me) => setStore((s) => ({ ...s, user: { ...s.user, ...me } })))
+        .catch(() => {
+          // Best-effort — the cardholder name simply stays whatever it was.
+        });
+    }
 
     return () => controller.abort();
   }, [session.token, setStore, loadCards]);
@@ -198,7 +205,9 @@ export function CardsPage() {
 
       {loadError ? <Note danger>{loadError}</Note> : null}
 
-      {cards.length === 0 ? (
+      {cards === null ? (
+        loadError ? null : <LoadingBlock label="Loading your cards…" />
+      ) : cards.length === 0 ? (
         <div className="bg-white border border-border-lt rounded-2xl shadow-sm p-8 text-center mb-5">
           <p className="m-0 text-ink-2 text-[12.5px]">No cards have been issued on this account yet.</p>
         </div>

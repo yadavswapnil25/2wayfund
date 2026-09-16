@@ -26,7 +26,7 @@ interface MeDto {
 }
 
 /** The real logged-in customer's own profile — fetched fresh on the
- * Account & Passbook page (the post-login landing page) so what's shown
+ * Account Overview page (the post-login landing page) so what's shown
  * there is whoever actually signed in, not always the seeded demo
  * customer. Only the fields the backend actually returns are included;
  * the caller merges this over the existing seed user rather than

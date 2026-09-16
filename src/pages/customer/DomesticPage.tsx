@@ -2,7 +2,7 @@ import { ArrowDownRight, ArrowUpRight, ChevronRight, Download, Printer, Send } f
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageHead } from "../../components/ui/Flow";
-import { Note } from "../../components/ui/Misc";
+import { LoadingBlock, Note } from "../../components/ui/Misc";
 import { StatusTag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
 import { displayMoney, formatCode } from "../../lib/format";
@@ -12,15 +12,17 @@ import { ApiError } from "../../services/apiClient";
 import type { Transaction } from "../../types/data";
 
 export function DomesticPage() {
-  const { store, session, balancesHidden } = useApp();
-  const [transactions, setTransactions] = useState<Transaction[]>(store.transactions);
+  const { session, balancesHidden } = useApp();
+  const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Seed data renders immediately, then is quietly replaced by the real
-  // transaction history once the backend responds — same pattern as the
-  // Account & Passbook page's Recent Activity.
+  // Never renders seed data — nothing shows until the real transaction
+  // history actually comes back, success or failure.
   useEffect(() => {
-    if (!session.token) return;
+    if (!session.token) {
+      setLoadError("Your session has no API token — sign out and sign back in to load your transactions.");
+      return;
+    }
     const controller = new AbortController();
     const token = session.token;
 
@@ -31,7 +33,7 @@ export function DomesticPage() {
         setLoadError(null);
       } catch (err) {
         if (controller.signal.aborted) return;
-        setLoadError(err instanceof ApiError ? err.message : "Could not load your live transaction history — showing the last known data.");
+        setLoadError(err instanceof ApiError ? err.message : "Could not load your transaction history. Please try again.");
       }
     })();
 
@@ -39,6 +41,7 @@ export function DomesticPage() {
   }, [session.token]);
 
   const rows = useMemo(() => {
+    if (transactions === null) return [];
     return transactions
       .filter((t) => t.corridor === "Domestic")
       .slice()
@@ -83,6 +86,10 @@ export function DomesticPage() {
         lede="Rupee settlement within India, routed by IFSC. No currency conversion applies and no cross-border commission is charged."
       />
 
+      {transactions === null ? (
+        loadError ? null : <LoadingBlock label="Loading your domestic transactions…" />
+      ) : (
+        <>
       {/* Stat strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">
         <div className="rounded-2xl border border-border-lt bg-white px-4.5 py-4 shadow-sm">
@@ -200,6 +207,8 @@ export function DomesticPage() {
           </div>
         )}
       </div>
+        </>
+      )}
 
       <Note>
         A transfer counts as domestic when the beneficiary is in India and both legs settle in rupees. Anything that crosses a border or converts

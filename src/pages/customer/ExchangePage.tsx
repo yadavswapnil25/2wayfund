@@ -4,7 +4,7 @@ import { PageHead } from "../../components/ui/Flow";
 import { Panel, PanelBody } from "../../components/ui/Panel";
 import { Field, Select, TextInput } from "../../components/ui/Field";
 import { Btn } from "../../components/ui/Button";
-import { Note } from "../../components/ui/Misc";
+import { LoadingBlock, Note } from "../../components/ui/Misc";
 import { useApp } from "../../state/AppContext";
 import { formatCode } from "../../lib/format";
 import { exchangeBlockMessage } from "../../lib/transfer";
@@ -36,8 +36,8 @@ export function ExchangePage() {
   const { store, setStore, session } = useApp();
   const [stage, setStage] = useState<Stage>("quote");
 
-  const [balances, setBalances] = useState<Balance[]>(store.balances);
-  const [fromCurrency, setFromCurrency] = useState<CurrencyCode>(store.balances[0]?.currency ?? "USD");
+  const [balances, setBalances] = useState<Balance[]>([]);
+  const [fromCurrency, setFromCurrency] = useState<CurrencyCode>("USD");
   const [toCurrency, setToCurrency] = useState<CurrencyCode>("INR");
   const [amount, setAmount] = useState("");
   const [otp, setOtp] = useState("");
@@ -46,22 +46,28 @@ export function ExchangePage() {
   const [result, setResult] = useState<ExchangeConfirmation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Never renders seed/placeholder balances — the currency picker and
+  // "Available" hint stay hidden behind a loader until the real ledger
+  // list actually comes back, success or failure. A customer can land
+  // here first (e.g. from a bookmark, or straight after login on some
+  // other page), so this page fetches its own copy rather than trusting
+  // the shared store might already be current.
+  const [loaded, setLoaded] = useState(false);
 
-  // Seed data renders immediately, then is quietly replaced by the real
-  // balances once the backend responds — the shared store's own balances
-  // are only ever fresh once the Account & Passbook page has loaded, and
-  // a customer can easily land here first (e.g. from a bookmark, or
-  // straight after login on some other page), so this page fetches its
-  // own copy rather than trusting the store might already be current.
   const loadBalances = useCallback(async (signal?: AbortSignal) => {
-    if (!session.token) return;
+    if (!session.token) {
+      setError("Your session has no API token — sign out and sign back in.");
+      return;
+    }
     try {
       const real = await getBalances(session.token, signal);
       setBalances(real);
-    } catch {
+      setFromCurrency((c) => (real.some((b) => b.currency === c) ? c : (real[0]?.currency ?? c)));
+      setError(null);
+      setLoaded(true);
+    } catch (err) {
       if (signal?.aborted) return;
-      // Best-effort — the seed/last-known balances stay displayed, and
-      // the real backend re-validates the amount at confirm time anyway.
+      setError(err instanceof ApiError ? err.message : "Could not load your balances. Please try again.");
     }
   }, [session.token]);
 
@@ -175,7 +181,11 @@ export function ExchangePage() {
               </Note>
             ) : null}
 
-            {stage === "quote" ? (
+            {stage === "quote" && !loaded ? (
+              error ? null : <LoadingBlock label="Loading your balances…" />
+            ) : null}
+
+            {stage === "quote" && loaded ? (
               <>
                 <Field
                   label="Convert from"

@@ -2,7 +2,7 @@ import { ArrowDownRight, ArrowLeftRight, ArrowUpRight, ChevronRight, Download, P
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageHead } from "../../components/ui/Flow";
-import { Note } from "../../components/ui/Misc";
+import { LoadingBlock, Note } from "../../components/ui/Misc";
 import { StatusTag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
 import { formatCode } from "../../lib/format";
@@ -13,14 +13,16 @@ import type { Transaction } from "../../types/data";
 
 export function InternationalPage() {
   const { store, session } = useApp();
-  const [transactions, setTransactions] = useState<Transaction[]>(store.transactions);
+  const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Seed data renders immediately, then is quietly replaced by the real
-  // transaction history once the backend responds — same pattern as the
-  // Account & Passbook page's Recent Activity and Domestic (INR).
+  // Never renders seed data — nothing shows until the real transaction
+  // history actually comes back, success or failure.
   useEffect(() => {
-    if (!session.token) return;
+    if (!session.token) {
+      setLoadError("Your session has no API token — sign out and sign back in to load your transactions.");
+      return;
+    }
     const controller = new AbortController();
     const token = session.token;
 
@@ -31,7 +33,7 @@ export function InternationalPage() {
         setLoadError(null);
       } catch (err) {
         if (controller.signal.aborted) return;
-        setLoadError(err instanceof ApiError ? err.message : "Could not load your live transaction history — showing the last known data.");
+        setLoadError(err instanceof ApiError ? err.message : "Could not load your transaction history. Please try again.");
       }
     })();
 
@@ -39,6 +41,7 @@ export function InternationalPage() {
   }, [session.token]);
 
   const rows = useMemo(() => {
+    if (transactions === null) return [];
     return transactions
       .filter((t) => t.corridor === "International")
       .slice()
@@ -84,6 +87,10 @@ export function InternationalPage() {
         lede="Cross-border settlement routed by SWIFT, with currency conversion and the standard commission applied per the published schedule."
       />
 
+      {transactions === null ? (
+        loadError ? null : <LoadingBlock label="Loading your international transactions…" />
+      ) : (
+        <>
       {/* Stat strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">
         <div className="rounded-2xl border border-border-lt bg-white px-4.5 py-4 shadow-sm">
@@ -190,6 +197,8 @@ export function InternationalPage() {
           </div>
         )}
       </div>
+        </>
+      )}
 
       <Note>
         Amounts are shown in the currency of the debit ledger. Conversion detail and commission for any entry appear on its receipt. A transfer

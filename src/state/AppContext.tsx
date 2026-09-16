@@ -115,7 +115,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setPhotoUrl(url);
   }, [session.token]);
 
-  // Picks up the photo once /me reports hasPhoto (the Account & Passbook
+  // Picks up the photo once /me reports hasPhoto (the Account Overview
   // page's own fetch sets it on the shared store) — and clears it again on
   // logout, so the next sign-in never briefly shows a stranger's photo.
   useEffect(() => {

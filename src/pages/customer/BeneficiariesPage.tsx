@@ -273,7 +273,7 @@ export function BeneficiariesPage() {
               <>
                 <div className="grid grid-cols-2 gap-2.5 mb-1.5">
                   <TypeTab active={tab === "external"} onClick={() => setTab("external")}>
-                    Indian Commercial Bank
+                    Others
                   </TypeTab>
                   <TypeTab active={tab === "internal"} onClick={() => setTab("internal")}>
                     2 Way Fund (Internal)

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { PageHead } from "../../components/ui/Flow";
 import { Btn } from "../../components/ui/Button";
-import { DetailGrid, Note } from "../../components/ui/Misc";
+import { DetailGrid, LoadingBlock, Note } from "../../components/ui/Misc";
 import { Stepper, WizActions } from "../../components/ui/Stepper";
 import { Tag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
@@ -75,13 +75,16 @@ export function TransferFundsPage() {
   const [receipt, setReceipt] = useState<TransferReceiptView | null>(null);
   const [voucherOpen, setVoucherOpen] = useState(false);
 
-  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>(store.beneficiaries);
-  const [balances, setBalances] = useState<Balance[]>(store.balances);
+  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
+  const [balances, setBalances] = useState<Balance[]>([]);
+  // Never renders seed beneficiaries/balances on the Details stage —
+  // nothing shows there until the real ones actually come back, success
+  // or failure. The shared store is only fresh once some other page has
+  // loaded it, and a customer can land here first, so this page fetches
+  // its own copies rather than trusting it's current.
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Seed data renders immediately, then is quietly replaced by real data —
-  // the shared store is only fresh once some other page has loaded it, so
-  // this page fetches its own copies rather than trusting it's current
-  // (matches ExchangePage, PinSecurityPage).
   const refreshMe = useCallback(
     (signal?: AbortSignal) => {
       if (!auth.token) return Promise.resolve();
@@ -95,20 +98,26 @@ export function TransferFundsPage() {
   useEffect(() => {
     const controller = new AbortController();
     const token = auth.token;
-    if (!token) return;
+    if (!token) {
+      setLoadError("Your session has no API token — sign out and sign back in.");
+      return;
+    }
 
-    // Best-effort — on failure, the seed beneficiaries/profile stay displayed.
-    const noop = () => undefined;
-    void getBalances(token, controller.signal).then(setBalances).catch(noop);
-    void listBeneficiaries(token, controller.signal)
-      .then((real) => {
-        setBeneficiaries(real);
+    void Promise.all([getBalances(token, controller.signal), listBeneficiaries(token, controller.signal)])
+      .then(([realBalances, realBeneficiaries]) => {
+        setBalances(realBalances);
+        setBeneficiaries(realBeneficiaries);
         // A payee picked from the seed list before the real one arrived
         // would otherwise linger as a dangling id and silently blank the
         // review stage.
-        setBeneId((id) => (real.some((b) => b.id === id) ? id : ""));
+        setBeneId((id) => (realBeneficiaries.some((b) => b.id === id) ? id : ""));
+        setLoadError(null);
+        setLoaded(true);
       })
-      .catch(noop);
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        setLoadError(err instanceof ApiError ? err.message : "Could not load your account details. Please try again.");
+      });
     void refreshMe(controller.signal);
 
     return () => controller.abort();
@@ -277,7 +286,17 @@ export function TransferFundsPage() {
           ]}
         />
 
-        {stage === "details" ? (
+        {stage === "details" && !loaded ? (
+          loadError ? (
+            <div className="p-4.5 sm:p-5">
+              <Note danger>{loadError}</Note>
+            </div>
+          ) : (
+            <LoadingBlock label="Loading your accounts…" />
+          )
+        ) : null}
+
+        {stage === "details" && loaded ? (
           <TransferDetailsForm
             beneficiaries={beneficiaries}
             beneficiary={beneficiary}

@@ -1,3 +1,4 @@
+import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
 
 export function Callout({
@@ -23,6 +24,18 @@ export function Callout({
 
 export function Note({ children, danger = false, className = "" }: { children: ReactNode; danger?: boolean; className?: string }) {
   return <p className={`m-0 text-xs leading-relaxed ${danger ? "text-neg font-semibold" : "text-ink-2"} ${className}`}>{children}</p>;
+}
+
+/** A page/section's live data hasn't come back from the API yet — shown
+ * in place of the content (never alongside stale seed data) until the
+ * first real response, success or failure, lands. */
+export function LoadingBlock({ label = "Loading…", className = "" }: { label?: string; className?: string }) {
+  return (
+    <div className={`flex flex-col items-center gap-2.5 py-14 text-ink-2 ${className}`}>
+      <Loader2 size={20} className="animate-spin" />
+      <p className="m-0 text-[12.5px]">{label}</p>
+    </div>
+  );
 }
 
 export function KV({ items }: { items: [string, ReactNode][] }) {

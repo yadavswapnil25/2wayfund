@@ -3,10 +3,11 @@ import { Link } from "react-router-dom";
 import { Building2, Landmark, ShieldAlert, Users } from "lucide-react";
 import { PageHead } from "../../components/ui/Flow";
 import { Btn } from "../../components/ui/Button";
-import { Note } from "../../components/ui/Misc";
+import { LoadingBlock, Note } from "../../components/ui/Misc";
 import { Tag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
 import type { Beneficiary } from "../../types/data";
+import { ApiError } from "../../services/apiClient";
 import { completeBeneficiaryCheck, deleteBeneficiary, listBeneficiaries } from "../../services/beneficiaryService";
 
 function beneCodeLabel(b: Beneficiary): string {
@@ -23,19 +24,29 @@ function beneBadge(b: Beneficiary): { label: string; variant: string } {
 }
 
 export function BeneficiaryDirectoryPage() {
-  const { store, session } = useApp();
-  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>(store.beneficiaries);
+  const { session } = useApp();
+  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Never renders the fictional seed list while the real one is in
+  // flight or if it fails — beneficiaries is null until a real response
+  // (success or failure) actually lands, so the page shows a loader or
+  // an explicit error instead of data that might not be this customer's.
   const refresh = useCallback(
     async (signal?: AbortSignal) => {
-      if (!session.token) return;
+      if (!session.token) {
+        setLoadError("Your session has no API token — sign out and sign back in to load your beneficiaries.");
+        return;
+      }
       try {
         const list = await listBeneficiaries(session.token, signal);
         setBeneficiaries(list);
-      } catch {
-        // best-effort — the seeded list stays displayed on failure
+        setLoadError(null);
+      } catch (err) {
+        if (signal?.aborted) return;
+        setLoadError(err instanceof ApiError ? err.message : "Could not load your beneficiaries. Please try again.");
       }
     },
     [session.token],
@@ -96,12 +107,22 @@ export function BeneficiaryDirectoryPage() {
                 <p className="m-0 mt-0.5 text-[11px] text-ink-2">Payees authorised on your NetBanking profile</p>
               </div>
             </div>
-            <Tag variant="completed">
-              {beneficiaries.length} {beneficiaries.length === 1 ? "Payee" : "Payees"}
-            </Tag>
+            {beneficiaries !== null ? (
+              <Tag variant="completed">
+                {beneficiaries.length} {beneficiaries.length === 1 ? "Payee" : "Payees"}
+              </Tag>
+            ) : null}
           </div>
 
-          {beneficiaries.length === 0 ? (
+          {beneficiaries === null ? (
+            loadError ? (
+              <div className="px-4.5 sm:px-5 py-10">
+                <Note danger>{loadError}</Note>
+              </div>
+            ) : (
+              <LoadingBlock label="Loading your beneficiaries…" />
+            )
+          ) : beneficiaries.length === 0 ? (
             <p className="text-center py-10 text-ink-2 text-[12.5px]">No beneficiaries registered. Add one from the Add a Beneficiary page.</p>
           ) : (
             <div className="divide-y divide-border-lt">

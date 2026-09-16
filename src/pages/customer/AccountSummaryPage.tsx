@@ -2,7 +2,7 @@ import { Eye, EyeOff, Copy, Check, Gift, KeyRound, Send, UserPlus, FileText, Che
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { StatusTag } from "../../components/ui/Tag";
-import { Note } from "../../components/ui/Misc";
+import { LoadingBlock, Note } from "../../components/ui/Misc";
 import { useApp } from "../../state/AppContext";
 import { displayMoney, formatCode, groupInFours, MASK } from "../../lib/format";
 import { getBalances, getMe, getTransactions } from "../../services/meService";
@@ -35,25 +35,26 @@ function CopyableDetail({ label, value, copied, onCopy }: CopyableDetailProps) {
 }
 
 export function AccountSummaryPage() {
-  const { store, setStore, session, balancesHidden } = useApp();
+  const { store, setStore, session, balancesHidden, setBalancesHidden } = useApp();
   const [acctRevealed, setAcctRevealed] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
-  // Kept separate from the shared store — Statements, Domestic and
-  // International still read store.transactions (the seed ledger); only
-  // this page's own Recent Activity has moved over to the real backend.
-  const [transactions, setTransactions] = useState<Transaction[]>(store.transactions);
+  // Never renders the seed customer — nobody sees "Aditi Sharma" (or any
+  // other real customer's last-known data) for even a moment while
+  // whoever actually logged in is still loading. `loaded` only flips
+  // true once the real name, balances and transactions have all landed.
+  const [loaded, setLoaded] = useState(false);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const navigate = useNavigate();
   const { user } = store;
   const kycVerified = user.kycStatus === "Verified";
 
-  // The seed customer renders immediately (no blank/loading state on the
-  // page you land on right after signing in) and is then quietly replaced
-  // by whoever actually logged in — real name, real Customer ID, real
-  // balances, real transaction history — once the real backend responds.
   useEffect(() => {
-    if (!session.token) return;
+    if (!session.token) {
+      setLoadError("Your session has no API token — sign out and sign back in.");
+      return;
+    }
     const controller = new AbortController();
     const token = session.token;
 
@@ -67,9 +68,10 @@ export function AccountSummaryPage() {
         setStore((s) => ({ ...s, user: { ...s.user, ...me }, balances }));
         setTransactions(txs);
         setLoadError(null);
+        setLoaded(true);
       } catch (err) {
         if (controller.signal.aborted) return;
-        setLoadError(err instanceof ApiError ? err.message : "Could not load your live account details — showing the last known data.");
+        setLoadError(err instanceof ApiError ? err.message : "Could not load your account. Please try again.");
       }
     })();
 
@@ -128,6 +130,10 @@ export function AccountSummaryPage() {
         </Note>
       ) : null}
 
+      {!loaded ? (
+        loadError ? null : <LoadingBlock label="Loading your account…" />
+      ) : (
+        <>
       {/* Hero balance card */}
       <div className="relative overflow-hidden rounded-2xl bg-white border border-gold/25 text-ink shadow-lg mb-4">
         <div className="pointer-events-none absolute -top-20 -right-14 w-56 h-56 rounded-full bg-gold/15 blur-3xl" />
@@ -139,7 +145,7 @@ export function AccountSummaryPage() {
               <ProfilePhotoAvatar name={user.name} onError={setPhotoError} />
               <div className="min-w-0">
                 <p className="m-0 text-[11px] text-ink-2">Welcome back</p>
-                <p className="m-0 text-[14.5px] font-bold text-navy truncate">{user.name}</p>
+                <p className="m-0 text-[19px] font-bold text-navy truncate">{user.name}</p>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                   <span
                     className={`inline-flex items-center gap-1 text-[9.5px] font-bold uppercase tracking-wide border px-1.75 py-0.5 rounded-full ${
@@ -160,9 +166,18 @@ export function AccountSummaryPage() {
           <div className="mt-4">
             <span className="text-[10.5px] uppercase tracking-wide text-ink-2 font-semibold">Available operative balance</span>
             <div className="flex items-end gap-2.5 flex-wrap mt-1">
-              <span className="font-num tabular-nums text-[19px] sm:text-[22px] font-extrabold leading-none text-gold-dk">
+              <span className="font-num tabular-nums text-[19px] sm:text-[22px] font-extrabold leading-none text-ink">
                 {displayMoney(inrLedger.amount, inrLedger.currency, balancesHidden)}
               </span>
+              <button
+                type="button"
+                onClick={() => setBalancesHidden((v) => !v)}
+                className="text-ink-2 hover:text-gold-dk"
+                title={balancesHidden ? "Show balances" : "Hide balances"}
+                aria-label={balancesHidden ? "Show balances" : "Hide balances"}
+              >
+                {balancesHidden ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </div>
 
@@ -370,6 +385,8 @@ export function AccountSummaryPage() {
 
         </div>
       </div>
+        </>
+      )}
     </>
   );
 }
