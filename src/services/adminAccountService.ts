@@ -63,6 +63,9 @@ export interface CustomerAccountDto {
   pin_status: string;
   transfers_blocked: boolean;
   transfers_blocked_reason: string | null;
+  transfers_block_scope: TransferBlockScope | null;
+  netbanking_enabled: boolean;
+  daily_domestic_limit: string | number;
   last_login_at: string | null;
   created_at: string | null;
 }
@@ -110,6 +113,17 @@ export async function listCustomerAccounts(
       lastPage: result.meta.last_page,
     },
   };
+}
+
+/** Permanently removes a customer account — staff only, irreversible.
+ * The backend cascades every record the customer actually owns
+ * (balances, transactions, cards, beneficiaries, etc.); any application
+ * they were provisioned from survives, just unlinked. */
+export async function deleteCustomerAccount(userId: number, token: string): Promise<void> {
+  await apiFetch<null>(`/admin/accounts/${userId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }
 
 export async function createCustomerAccount(
@@ -199,32 +213,90 @@ export async function creditCustomerAccount(
   return { currency: dto.balance.currency, newBalance: Number(dto.balance.amount) };
 }
 
+/** The Compliance Console's "Debit Funds" action — the reverse of
+ * creditCustomerAccount, subtracting from one customer's balance in a
+ * given currency. The backend rejects an amount exceeding what's
+ * actually available (including a currency the customer holds nothing
+ * in), so there's nothing to pre-check client-side beyond "amount > 0". */
+export async function debitCustomerAccount(
+  userId: number,
+  payload: { currency: CurrencyCode; amount: number; note?: string; valueDate?: string },
+  token: string
+): Promise<CreditAccountResult> {
+  const dto = await apiFetch<CreditAccountDto>(`/admin/accounts/${userId}/debit`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ currency: payload.currency, amount: payload.amount, note: payload.note, value_date: payload.valueDate || undefined }),
+  });
+
+  return { currency: dto.balance.currency, newBalance: Number(dto.balance.amount) };
+}
+
+/** "external_only" leaves internal-to-internal transfers open
+ * (Beneficiary.internal); "all" stops every transfer but leaves Currency
+ * Exchange untouched; "everything" additionally stops Currency Exchange
+ * — the broadest freeze. Only meaningful while blocked is true. */
+export type TransferBlockScope = "external_only" | "all" | "everything";
+
 interface TransferBlockDto {
   transfers_blocked: boolean;
   transfers_blocked_reason: string | null;
+  transfers_block_scope: TransferBlockScope | null;
 }
 
 export interface TransferBlockStatus {
   blocked: boolean;
   reason: string | null;
+  scope: TransferBlockScope | null;
 }
 
-/** The Compliance Console's "Block Transfers" control — instantly blocks
- * or unblocks a customer's ability to send a fund transfer. Scoped to
- * Transfer Funds only; every other customer action is unaffected. Staff
- * only, hence the token. */
+/** The Compliance Console's "Freeze Account" control — instantly freezes
+ * or unfreezes a customer's ability to send a fund transfer, at one of
+ * two scopes. Scoped to Transfer Funds only; every other customer action
+ * is unaffected. Staff only, hence the token. */
 export async function updateCustomerTransferBlock(
   userId: number,
-  payload: { blocked: boolean; reason?: string },
+  payload: { blocked: boolean; reason?: string; scope?: TransferBlockScope },
   token: string
 ): Promise<TransferBlockStatus> {
   const dto = await apiFetch<TransferBlockDto>(`/admin/accounts/${userId}/transfer-block`, {
     method: "PUT",
     headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ blocked: payload.blocked, reason: payload.reason }),
+    body: JSON.stringify({ blocked: payload.blocked, reason: payload.reason, scope: payload.scope }),
   });
 
-  return { blocked: dto.transfers_blocked, reason: dto.transfers_blocked_reason };
+  return { blocked: dto.transfers_blocked, reason: dto.transfers_blocked_reason, scope: dto.transfers_block_scope };
+}
+
+/** The Compliance Console's "Netbanking Access" control — switches
+ * Transfer Funds / Currency Exchange on or off for a customer's account
+ * entirely. Independent of the Freeze Account controls above; login and
+ * every other account action are unaffected either way. Staff only,
+ * hence the token. */
+export async function updateNetbankingAccess(userId: number, enabled: boolean, token: string): Promise<boolean> {
+  const dto = await apiFetch<{ netbanking_enabled: boolean }>(`/admin/accounts/${userId}/netbanking`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ enabled }),
+  });
+
+  return dto.netbanking_enabled;
+}
+
+/** The Compliance Console's "Transaction Limit" control — sets a
+ * customer's daily domestic transfer cap directly, overriding whatever
+ * their account tier assigned at provisioning. Actually enforced by the
+ * backend (TransferService::assertWithinDailyLimit) against the day's
+ * completed-or-held transfers, not just a displayed figure. Staff only,
+ * hence the token. */
+export async function updateAccountLimit(userId: number, dailyDomesticLimit: number, token: string): Promise<number> {
+  const dto = await apiFetch<{ daily_domestic_limit: string | number }>(`/admin/accounts/${userId}/limit`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ daily_domestic_limit: dailyDomesticLimit }),
+  });
+
+  return Number(dto.daily_domestic_limit);
 }
 
 /** A card is provisioned and maintained by the institution — the
@@ -232,7 +304,7 @@ export async function updateCustomerTransferBlock(
  * ever created, edited, or removed. Staff only, hence the token. */
 export interface AdminCardPayload {
   type: "Debit" | "Credit";
-  last4: string;
+  cardNumber: string;
   expiry: string;
   cvv: string;
   forms: string[];
@@ -249,7 +321,7 @@ export interface AdminCardPayload {
 function cardPayloadBody(payload: AdminCardPayload) {
   return JSON.stringify({
     type: payload.type,
-    last4: payload.last4,
+    card_number: payload.cardNumber,
     expiry: payload.expiry,
     cvv: payload.cvv,
     forms: payload.forms,

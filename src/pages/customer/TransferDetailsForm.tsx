@@ -24,8 +24,7 @@ export interface TransferDetailsFormProps {
   accountNumber: string;
   availableInr: number;
   balancesHidden: boolean;
-  transfersBlocked: boolean;
-  transfersBlockedReason: string | null;
+  blockMessage: string | null;
   onBeneChange: (id: string) => void;
   onChannelChange: (id: TransferChannel) => void;
   onAmountChange: (raw: string) => void;
@@ -38,10 +37,9 @@ export interface TransferDetailsFormProps {
 export function TransferDetailsForm(p: TransferDetailsFormProps) {
   return (
     <div className="p-4.5 sm:p-5">
-      {p.transfersBlocked ? (
+      {p.blockMessage ? (
         <Note danger className="mb-4.5">
-          Transfers are currently blocked on this account{p.transfersBlockedReason ? `: ${p.transfersBlockedReason}` : "."} Contact support for
-          assistance.
+          {p.blockMessage}
         </Note>
       ) : null}
 
@@ -135,7 +133,7 @@ export function TransferDetailsForm(p: TransferDetailsFormProps) {
       </div>
 
       <WizActions>
-        <Btn variant="block" onClick={p.onProceed} disabled={p.transfersBlocked}>
+        <Btn variant="block" onClick={p.onProceed} disabled={!!p.blockMessage}>
           <span className="inline-flex items-center justify-center gap-1.5">
             Proceed to Review &amp; Authorization <ArrowRight size={13} />
           </span>

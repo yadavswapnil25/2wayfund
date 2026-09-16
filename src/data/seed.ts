@@ -24,6 +24,8 @@ export function createSeedStore(): Store {
       dailyDomesticLimit: 1000000,
       transfersBlocked: false,
       transfersBlockedReason: null,
+      transfersBlockScope: null,
+      netbankingEnabled: true,
       // Never displayed anywhere in the UI — only its presence/status is
       // shown — and changed in place by the 9-Digit PIN & Security page.
       pin: "418200773",

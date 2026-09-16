@@ -117,13 +117,7 @@ export function InternationalPage() {
         >
           <Download size={13} /> Download CSV
         </button>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold text-ink hover:bg-tint"
-        >
-          <Printer size={13} /> Print / Save as PDF
-        </button>
+        
         <Link
           to="/exchange"
           className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-xs font-semibold text-ink no-underline hover:bg-tint"

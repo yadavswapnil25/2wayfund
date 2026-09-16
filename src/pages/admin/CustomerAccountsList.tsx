@@ -1,16 +1,23 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { ChevronLeft, ChevronRight, Search, Users, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, Trash2, Users, X } from "lucide-react";
 import { Panel } from "../../components/ui/Panel";
 import { Field, TextInput } from "../../components/ui/Field";
 import { Btn } from "../../components/ui/Button";
 import { Tag } from "../../components/ui/Tag";
 import { Callout } from "../../components/ui/Misc";
+import { Modal } from "../../components/ui/Modal";
 import { useApp } from "../../state/AppContext";
 import { formatStamp } from "../../lib/dates";
-import { listCustomerAccounts, type AccountListMeta, type CustomerAccountDto } from "../../services/adminAccountService";
+import {
+  deleteCustomerAccount,
+  listCustomerAccounts,
+  type AccountListMeta,
+  type CustomerAccountDto,
+} from "../../services/adminAccountService";
 import { ApiError } from "../../services/apiClient";
-import { AddFundsPanel } from "./AddFundsPanel";
+import { AccountLimitPanel } from "./AccountLimitPanel";
 import { CardsPanel } from "./CardsPanel";
+import { NetbankingAccessPanel } from "./NetbankingAccessPanel";
 import { TransferBlockPanel } from "./TransferBlockPanel";
 
 /** Every customer account — however it was provisioned (an approved
@@ -30,6 +37,10 @@ export function CustomerAccountsList({ refreshSignal = 0 }: { refreshSignal?: nu
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  const [deleteTarget, setDeleteTarget] = useState<CustomerAccountDto | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
@@ -71,6 +82,23 @@ export function CustomerAccountsList({ refreshSignal = 0 }: { refreshSignal?: nu
     setEmailInput("");
     setPage(1);
     setSearch("");
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget || !session.token || deleting) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteCustomerAccount(deleteTarget.id, session.token);
+      setAccounts((prev) => prev.filter((acc) => acc.id !== deleteTarget.id));
+      setMeta((prev) => (prev ? { ...prev, total: prev.total - 1 } : prev));
+      if (expandedId === deleteTarget.id) setExpandedId(null);
+      setDeleteTarget(null);
+    } catch (err) {
+      setDeleteError(err instanceof ApiError ? err.message : "Could not delete this account. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -163,13 +191,26 @@ export function CustomerAccountsList({ refreshSignal = 0 }: { refreshSignal?: nu
                       {a.email} · {a.account_number}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setExpandedId(isOpen ? null : a.id)}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-semibold text-ink hover:bg-tint flex-none"
-                  >
-                    {isOpen ? "Close" : "Details"}
-                  </button>
+                  <div className="flex items-center gap-2 flex-none">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedId(isOpen ? null : a.id)}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-semibold text-ink hover:bg-tint"
+                    >
+                      {isOpen ? "Close" : "Details"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteError(null);
+                        setDeleteTarget(a);
+                      }}
+                      aria-label={`Delete account ${a.reference}`}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[#E3B8B0] bg-white px-3 py-1.5 text-xs font-semibold text-neg hover:bg-[#FDF6F4]"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
 
                 {isOpen ? (
@@ -193,7 +234,6 @@ export function CustomerAccountsList({ refreshSignal = 0 }: { refreshSignal?: nu
                         </div>
                       ))}
                     </div>
-                    {session.token ? <AddFundsPanel userId={a.id} token={session.token} /> : null}
                     {session.token ? <CardsPanel userId={a.id} token={session.token} /> : null}
                     {session.token ? (
                       <TransferBlockPanel
@@ -201,12 +241,35 @@ export function CustomerAccountsList({ refreshSignal = 0 }: { refreshSignal?: nu
                         token={session.token}
                         blocked={a.transfers_blocked}
                         reason={a.transfers_blocked_reason}
+                        scope={a.transfers_block_scope}
                         onChange={(status) =>
                           setAccounts((prev) =>
                             prev.map((acc) =>
-                              acc.id === a.id ? { ...acc, transfers_blocked: status.blocked, transfers_blocked_reason: status.reason } : acc
+                              acc.id === a.id
+                                ? { ...acc, transfers_blocked: status.blocked, transfers_blocked_reason: status.reason, transfers_block_scope: status.scope }
+                                : acc
                             )
                           )
+                        }
+                      />
+                    ) : null}
+                    {session.token ? (
+                      <NetbankingAccessPanel
+                        userId={a.id}
+                        token={session.token}
+                        enabled={a.netbanking_enabled}
+                        onChange={(enabled) =>
+                          setAccounts((prev) => prev.map((acc) => (acc.id === a.id ? { ...acc, netbanking_enabled: enabled } : acc)))
+                        }
+                      />
+                    ) : null}
+                    {session.token ? (
+                      <AccountLimitPanel
+                        userId={a.id}
+                        token={session.token}
+                        limit={Number(a.daily_domestic_limit)}
+                        onChange={(limit) =>
+                          setAccounts((prev) => prev.map((acc) => (acc.id === a.id ? { ...acc, daily_domestic_limit: limit } : acc)))
                         }
                       />
                     ) : null}
@@ -240,6 +303,34 @@ export function CustomerAccountsList({ refreshSignal = 0 }: { refreshSignal?: nu
             Next <ChevronRight size={13} />
           </button>
         </div>
+      ) : null}
+
+      {deleteTarget ? (
+        <Modal
+          title={
+            <span className="flex items-center gap-1.5 text-neg">
+              <Trash2 size={15} /> Delete customer account?
+            </span>
+          }
+          onClose={() => (deleting ? null : setDeleteTarget(null))}
+          footerExtra={
+            <Btn variant="reject" onClick={() => void confirmDelete()} disabled={deleting}>
+              {deleting ? "Deleting…" : "Delete permanently"}
+            </Btn>
+          }
+        >
+          {deleteError ? (
+            <Callout title="Couldn't delete this account" variant="warn">
+              <p>{deleteError}</p>
+            </Callout>
+          ) : null}
+          <p>
+            Delete <strong className="text-navy">{deleteTarget.reference}</strong> ({deleteTarget.name}, {deleteTarget.email})? This
+            permanently removes the account and everything it owns — balances, transactions, cards, beneficiaries, and login access.
+            It cannot be undone.
+          </p>
+          <p className="text-ink-2">The application this account was provisioned from, if any, is kept — only unlinked.</p>
+        </Modal>
       ) : null}
     </Panel>
   );

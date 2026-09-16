@@ -3,7 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { useApp } from "../../state/AppContext";
 import { Brandbar } from "./Brandbar";
 import { PubNav } from "./PubNav";
-import { Breadcrumbs, SessionBar } from "./Breadcrumbs";
+import { Breadcrumbs } from "./Breadcrumbs";
 import { Sidenav } from "./Sidenav";
 import { Footer } from "./Footer";
 
@@ -29,7 +29,6 @@ export function AppShell() {
           the dashboard topbar (profile, notifications, logout) once
           someone's actually signed in. */}
       {signedIn ? <Brandbar onToggleNav={() => setNavOpen((v) => !v)} /> : <PubNav />}
-      <SessionBar />
       {!isAuthPage ? <Breadcrumbs /> : null}
 
       <div

@@ -22,11 +22,22 @@ export interface User {
   branch: string;
   panelCode: string;
   dailyDomesticLimit: number;
-  /** Set by staff via the Compliance Console's "Block Transfers" control —
-   * scoped to Transfer Funds only, so it never affects login or any other
-   * account action. */
+  /** Set by staff via the Compliance Console's "Freeze Account" control —
+   * scoped to the customer's own financial actions, so it never affects
+   * login or any other account action. transfersBlockScope is null
+   * unless transfersBlocked is true: "external_only" leaves
+   * internal-to-internal transfers open (Beneficiary.internal); "all"
+   * stops every transfer but leaves Currency Exchange untouched;
+   * "everything" additionally stops Currency Exchange too. */
   transfersBlocked: boolean;
   transfersBlockedReason: string | null;
+  transfersBlockScope: "external_only" | "all" | "everything" | null;
+  /** Whether Transfer Funds / Currency Exchange are switched on for this
+   * account at all — set by staff via the Compliance Console's
+   * "Netbanking Access" control. Independent of transfersBlocked: login
+   * and every other account action are unaffected either way. Defaults
+   * true for every account. */
+  netbankingEnabled: boolean;
   pin: string;
   pinStatus: string;
   kycStatus: string;
@@ -82,6 +93,10 @@ export interface Tier {
 export interface Card {
   id: string;
   type: "Debit" | "Credit";
+  /** Full 16-digit fictional card number — a prototype-only value (see
+   * the backend's card_number migration note); optional because locally
+   * seeded demo data predates this field and only ever carries last4. */
+  cardNumber?: string;
   last4: string;
   expiry: string;
   cvv: string;

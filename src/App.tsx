@@ -30,6 +30,7 @@ import { ConsoleHomePage } from "./pages/admin/ConsoleHomePage";
 import { ComplianceConsolePage } from "./pages/admin/ComplianceConsolePage";
 import { OpenCustomerAccountPage } from "./pages/admin/OpenCustomerAccountPage";
 import { CustomerAccountsPage } from "./pages/admin/CustomerAccountsPage";
+import { AddFundsPage } from "./pages/admin/AddFundsPage";
 import { MessagingPage } from "./pages/admin/MessagingPage";
 import { AdminPasswordPage } from "./pages/admin/AdminPasswordPage";
 import { AdminReferralsPage } from "./pages/admin/AdminReferralsPage";
@@ -88,6 +89,7 @@ function AppRoutes() {
         <Route path="/admin" element={<RouteGuard><ComplianceConsolePage /></RouteGuard>} />
         <Route path="/open-customer-account" element={<RouteGuard><OpenCustomerAccountPage /></RouteGuard>} />
         <Route path="/customer-accounts" element={<RouteGuard><CustomerAccountsPage /></RouteGuard>} />
+        <Route path="/add-funds" element={<RouteGuard><AddFundsPage /></RouteGuard>} />
         <Route path="/messages" element={<RouteGuard><MessagingPage /></RouteGuard>} />
         <Route path="/admin-password" element={<RouteGuard><AdminPasswordPage /></RouteGuard>} />
         <Route path="/admin-referrals" element={<RouteGuard><AdminReferralsPage /></RouteGuard>} />

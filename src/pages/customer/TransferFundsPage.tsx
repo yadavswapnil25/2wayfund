@@ -6,7 +6,7 @@ import { DetailGrid, Note } from "../../components/ui/Misc";
 import { Stepper, WizActions } from "../../components/ui/Stepper";
 import { Tag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
-import { beneCodeLabel, beneficiaryRestrictionReason, transferChannel, txQuote } from "../../lib/transfer";
+import { beneCodeLabel, beneficiaryRestrictionReason, transferBlockMessage, transferChannel, txQuote } from "../../lib/transfer";
 import { displayMoney, formatCode } from "../../lib/format";
 import { amountInWordsInr } from "../../lib/words";
 import { getMe, getBalances } from "../../services/meService";
@@ -119,7 +119,7 @@ export function TransferFundsPage() {
   const channel = transferChannel(channelId);
   const inrLedger = balances.find((b) => b.currency === "INR") ?? { currency: "INR" as const, amount: 0, note: "" };
   const quote = beneficiary ? txQuote(store, amount, beneficiary) : null;
-  const transfersBlocked = store.user.transfersBlocked;
+  const blockMessage = transferBlockMessage(store.user, beneficiary);
 
   function resetAll() {
     setStage("details");
@@ -135,8 +135,8 @@ export function TransferFundsPage() {
   }
 
   function goToReview() {
-    const problem = transfersBlocked
-      ? "Transfers are currently blocked on this account. Contact support for assistance."
+    const problem = blockMessage
+      ? blockMessage
       : !beneficiary
         ? "Select a beneficiary to continue."
         : beneficiary.status !== "Verified"
@@ -289,8 +289,7 @@ export function TransferFundsPage() {
             accountNumber={store.user.accountNumber}
             availableInr={inrLedger.amount}
             balancesHidden={balancesHidden}
-            transfersBlocked={transfersBlocked}
-            transfersBlockedReason={store.user.transfersBlockedReason}
+            blockMessage={blockMessage}
             onBeneChange={setBeneId}
             onChannelChange={setChannelId}
             onAmountChange={setAmountRaw}

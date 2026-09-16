@@ -4,7 +4,12 @@ import { Field, Select, TextInput } from "../../components/ui/Field";
 import { DatePicker } from "../../components/ui/DatePicker";
 import { Btn } from "../../components/ui/Button";
 import { Callout } from "../../components/ui/Misc";
-import { creditCustomerAccount, listCustomerBalances, type CustomerBalance } from "../../services/adminAccountService";
+import {
+  creditCustomerAccount,
+  debitCustomerAccount,
+  listCustomerBalances,
+  type CustomerBalance,
+} from "../../services/adminAccountService";
 import { ApiError } from "../../services/apiClient";
 import { formatCode } from "../../lib/format";
 import { todayIso } from "../../lib/dates";
@@ -12,19 +17,25 @@ import type { CurrencyCode } from "../../types/data";
 
 const CURRENCIES: CurrencyCode[] = ["USD", "EUR", "INR", "GBP", "CAD", "JPY", "AUD", "SGD", "CHF"];
 
-/** The Compliance Console's "Add Funds" action, shown inside a customer's
- * expanded row in Customer Accounts. Credits the chosen currency's
- * balance directly — creating that currency's ledger row if the account
- * has never held one — and posts a matching "Admin credit" transaction,
- * so the credit shows up in the customer's own Recent Activity too.
+type Direction = "credit" | "debit";
+
+/** The Compliance Console's "Add / Debit Funds" action, shown inside a
+ * customer's expanded row in Customer Accounts. Credits or debits the
+ * chosen currency's balance directly — a credit creates that currency's
+ * ledger row if the account has never held one; a debit is rejected
+ * outright by the backend if it would take the balance negative — and
+ * posts a matching "Admin credit"/"Admin debit" transaction, so it shows
+ * up in the customer's own Recent Activity too.
  *
  * Shows the account's existing balances and defaults the currency picker
- * to match one of them: crediting a currency independent of what the
- * account actually holds silently creates an unrelated second balance
- * (e.g. Open Account defaults its opening deposit to USD; picking INR
- * here out of habit looks like "adding funds" but really opens a whole
- * new, empty INR ledger instead of topping up the USD one). */
+ * to match one of them: acting on a currency independent of what the
+ * account actually holds either silently creates an unrelated second
+ * balance (credit) or is simply impossible (debit) — e.g. Open Account
+ * defaults its opening deposit to USD; picking INR here out of habit
+ * doesn't mean "the account's funds," it means a different, unrelated
+ * ledger. */
 export function AddFundsPanel({ userId, token }: { userId: number; token: string }) {
+  const [direction, setDirection] = useState<Direction>("credit");
   const [balances, setBalances] = useState<CustomerBalance[] | null>(null);
   const [balancesError, setBalancesError] = useState<string | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode | null>(null);
@@ -33,7 +44,7 @@ export function AddFundsPanel({ userId, token }: { userId: number; token: string
   const [valueDate, setValueDate] = useState(todayIso());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [credited, setCredited] = useState<{ currency: CurrencyCode; newBalance: number; valueDate: string } | null>(null);
+  const [posted, setPosted] = useState<{ direction: Direction; currency: CurrencyCode; newBalance: number; valueDate: string } | null>(null);
 
   const loadBalances = useCallback(
     async (signal?: AbortSignal) => {
@@ -59,10 +70,16 @@ export function AddFundsPanel({ userId, token }: { userId: number; token: string
   // balances load, and only if the admin hasn't already picked one.
   const effectiveCurrency = currency ?? balances?.[0]?.currency ?? "INR";
 
+  function switchDirection(next: Direction) {
+    setDirection(next);
+    setError(null);
+    setPosted(null);
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    setCredited(null);
+    setPosted(null);
 
     const numeric = Number(amount);
     if (!amount || Number.isNaN(numeric) || numeric <= 0) {
@@ -70,10 +87,11 @@ export function AddFundsPanel({ userId, token }: { userId: number; token: string
       return;
     }
     const effectiveValueDate = valueDate || todayIso();
+    const action = direction === "credit" ? creditCustomerAccount : debitCustomerAccount;
 
     setSubmitting(true);
     try {
-      const result = await creditCustomerAccount(
+      const result = await action(
         userId,
         {
           currency: effectiveCurrency,
@@ -83,13 +101,17 @@ export function AddFundsPanel({ userId, token }: { userId: number; token: string
         },
         token
       );
-      setCredited({ ...result, valueDate: effectiveValueDate });
+      setPosted({ ...result, direction, valueDate: effectiveValueDate });
       setAmount("");
       setNote("");
       setValueDate(todayIso());
       void loadBalances();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not add funds. Please try again.");
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : `Could not ${direction === "credit" ? "add" : "debit"} funds. Please try again.`
+      );
     } finally {
       setSubmitting(false);
     }
@@ -97,9 +119,25 @@ export function AddFundsPanel({ userId, token }: { userId: number; token: string
 
   return (
     <div className="mt-4 pt-4 border-t border-border-lt">
-      <div className="flex items-center gap-1.5 mb-2.5">
-        <Wallet size={13} className="text-navy" />
-        <h4 className="m-0 text-[11px] font-bold uppercase tracking-wide text-navy">Add Funds</h4>
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-2.5">
+        <div className="flex items-center gap-1.5">
+          <Wallet size={13} className="text-navy" />
+          <h4 className="m-0 text-[11px] font-bold uppercase tracking-wide text-navy">Add / Debit Funds</h4>
+        </div>
+        <div className="inline-flex rounded-full border border-border-lt bg-tint p-0.5">
+          {(["credit", "debit"] as const).map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => switchDirection(d)}
+              className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-colors ${
+                direction === d ? "bg-white text-navy shadow-sm" : "text-ink-2 hover:text-navy"
+              }`}
+            >
+              {d === "credit" ? "Credit" : "Debit"}
+            </button>
+          ))}
+        </div>
       </div>
 
       <p className="m-0 mb-3 text-[11.5px] text-ink-2">
@@ -115,21 +153,21 @@ export function AddFundsPanel({ userId, token }: { userId: number; token: string
         )}
       </p>
 
-      {credited ? (
-        <Callout title="Funds credited" className="mb-3">
+      {posted ? (
+        <Callout title={posted.direction === "credit" ? "Funds credited" : "Funds debited"} className="mb-3">
           <p>
-            New {credited.currency} balance: <strong>{formatCode(credited.newBalance, credited.currency)}</strong>
-            {credited.valueDate !== todayIso() ? (
+            New {posted.currency} balance: <strong>{formatCode(posted.newBalance, posted.currency)}</strong>
+            {posted.valueDate !== todayIso() ? (
               <>
                 {" "}
-                — posted with value date <strong>{credited.valueDate}</strong>
+                — posted with value date <strong>{posted.valueDate}</strong>
               </>
             ) : null}
           </p>
         </Callout>
       ) : null}
       {error ? (
-        <Callout title="Couldn't add funds" variant="warn" className="mb-3">
+        <Callout title={direction === "credit" ? "Couldn't add funds" : "Couldn't debit funds"} variant="warn" className="mb-3">
           <p>{error}</p>
         </Callout>
       ) : null}
@@ -170,10 +208,23 @@ export function AddFundsPanel({ userId, token }: { userId: number; token: string
           </div>
         </Field>
         <Field label="Note (optional)" htmlFor={`fund-note-${userId}`} className="mb-0 flex-1 min-w-[180px]">
-          <TextInput id={`fund-note-${userId}`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Goodwill credit" />
+          <TextInput
+            id={`fund-note-${userId}`}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={direction === "credit" ? "e.g. Goodwill credit" : "e.g. Reversing a credit issued in error"}
+          />
         </Field>
-        <Btn type="submit" variant="primary" disabled={submitting || balances === null}>
-          {submitting ? "Adding…" : balances === null ? "Loading…" : "Add Funds"}
+        <Btn type="submit" variant={direction === "credit" ? "primary" : "reject"} disabled={submitting || balances === null}>
+          {submitting
+            ? direction === "credit"
+              ? "Adding…"
+              : "Debiting…"
+            : balances === null
+              ? "Loading…"
+              : direction === "credit"
+                ? "Add Funds"
+                : "Debit Funds"}
         </Btn>
       </form>
     </div>

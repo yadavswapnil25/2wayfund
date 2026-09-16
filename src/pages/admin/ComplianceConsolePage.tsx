@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
+  ImageOff,
   Landmark,
   MapPin,
   ScrollText,
@@ -26,7 +27,15 @@ import { ageOn, isoToDisplay, stamp, todayIso } from "../../lib/dates";
 import { formatCode } from "../../lib/format";
 import { seedKycForApplications } from "../../lib/kyc";
 import { OPENING_STEPS, stageForStatus } from "../../data/openAccountOptions";
-import { deleteApplication, listApplications, type ApplicationListMeta } from "../../services/applicationService";
+import {
+  deleteApplication,
+  getApplicationBusinessCertificate,
+  getApplicationPhoto,
+  getApplicationSignature,
+  listApplications,
+  type ApplicationDocument,
+  type ApplicationListMeta,
+} from "../../services/applicationService";
 import { ApiError } from "../../services/apiClient";
 
 /** A titled, bordered card for one group of read-only details — the same
@@ -47,12 +56,42 @@ function DetailCard({ icon, title, items, children }: { icon: ReactNode; title: 
   );
 }
 
+/** One "Uploaded"/"Missing" tag plus, once uploaded, a "View" trigger —
+ * used for Photo, Signature and Business certificate alike in the
+ * application status strip. */
+function DocumentStatus({ label, uploaded, onView }: { label: string; uploaded?: boolean; onView: () => void }) {
+  return (
+    <span className="flex items-center gap-1.5 text-[11.5px] text-ink-2">
+      {label} <Tag variant={uploaded ? "approved" : "review"}>{uploaded ? "Uploaded" : "Missing"}</Tag>
+      {uploaded ? (
+        <button type="button" onClick={onView} className="text-[11px] font-semibold text-navy underline">
+          View
+        </button>
+      ) : null}
+    </span>
+  );
+}
+
 function appTagVariant(status: Application["status"]): string {
   if (status === "Approved") return "approved";
   if (status === "Rejected") return "rejected";
   if (status === "Under review") return "review";
   return "submitted";
 }
+
+type DocKind = "photo" | "signature" | "business-certificate";
+
+const DOC_FETCHERS: Record<DocKind, (ref: string, token: string, signal?: AbortSignal) => Promise<ApplicationDocument | null>> = {
+  photo: getApplicationPhoto,
+  signature: getApplicationSignature,
+  "business-certificate": getApplicationBusinessCertificate,
+};
+
+const DOC_LABELS: Record<DocKind, string> = {
+  photo: "Photograph",
+  signature: "Signature",
+  "business-certificate": "Business certificate",
+};
 
 function docTagVariant(status: KycDocument["status"]): string {
   if (status === "Verified") return "approved";
@@ -89,6 +128,50 @@ export function ComplianceConsolePage() {
   const [deleteTarget, setDeleteTarget] = useState<Application | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const [docView, setDocView] = useState<{ ref: string; kind: DocKind } | null>(null);
+  const [doc, setDoc] = useState<ApplicationDocument | null>(null);
+  const [docLoading, setDocLoading] = useState(false);
+  const [docError, setDocError] = useState<string | null>(null);
+
+  // Fetches the actual document only once a "View" button is clicked,
+  // not for every uploaded document on every row — these are
+  // authenticated, one-off blob fetches (apiFetchBlob), not something to
+  // prefetch in bulk.
+  useEffect(() => {
+    if (!docView || !session.token) return;
+    const controller = new AbortController();
+    setDoc(null);
+    setDocError(null);
+    setDocLoading(true);
+    DOC_FETCHERS[docView.kind](docView.ref, session.token, controller.signal)
+      .then((result) => {
+        if (controller.signal.aborted) return;
+        if (result === null) {
+          setDocError("This document could not be found — it may not have finished uploading.");
+        } else {
+          setDoc(result);
+        }
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        setDocError(err instanceof ApiError ? err.message : "Could not load this document. Please try again.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setDocLoading(false);
+      });
+    return () => controller.abort();
+  }, [docView, session.token]);
+
+  // The object URL is only ever referenced by the modal that fetched it —
+  // revoke on every change (new document, or the modal closing) so a
+  // reviewer paging through several applications' documents doesn't leak
+  // one blob URL per click for the rest of the session.
+  useEffect(() => {
+    return () => {
+      if (doc) URL.revokeObjectURL(doc.url);
+    };
+  }, [doc]);
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
@@ -169,7 +252,7 @@ export function ComplianceConsolePage() {
 
   return (
     <>
-      <PageHead title="Compliance Console" lede="Review account-opening applications and their eKYC documents." />
+      <PageHead title="Application Console" lede="Review account-opening applications and their eKYC documents." />
 
       {loadError ? (
         <Callout title="Couldn't load the application queue" variant="warn" className="mb-5">
@@ -293,16 +376,14 @@ export function ComplianceConsolePage() {
                           of {OPENING_STEPS.length}
                         </span>
                         <span className="w-px h-4 bg-border-lt hidden sm:block" />
-                        <span className="flex items-center gap-1.5 text-[11.5px] text-ink-2">
-                          Signature <Tag variant={a.hasSignature ? "approved" : "review"}>{a.hasSignature ? "Uploaded" : "Missing"}</Tag>
-                        </span>
+                        <DocumentStatus label="Photo" uploaded={a.hasPhoto} onView={() => setDocView({ ref: a.ref, kind: "photo" })} />
+                        <DocumentStatus label="Signature" uploaded={a.hasSignature} onView={() => setDocView({ ref: a.ref, kind: "signature" })} />
                         {a.tier.startsWith("Corporate Account") ? (
-                          <span className="flex items-center gap-1.5 text-[11.5px] text-ink-2">
-                            Business certificate{" "}
-                            <Tag variant={a.hasBusinessCertificate ? "approved" : "review"}>
-                              {a.hasBusinessCertificate ? "Uploaded" : "Missing"}
-                            </Tag>
-                          </span>
+                          <DocumentStatus
+                            label="Business certificate"
+                            uploaded={a.hasBusinessCertificate}
+                            onView={() => setDocView({ ref: a.ref, kind: "business-certificate" })}
+                          />
                         ) : null}
                       </div>
 
@@ -480,6 +561,43 @@ export function ComplianceConsolePage() {
               This application already provisioned a customer account — that account is not affected, only this application record.
             </p>
           ) : null}
+        </Modal>
+      ) : null}
+
+      {docView ? (
+        <Modal
+          title={`${DOC_LABELS[docView.kind]} — ${docView.ref}`}
+          onClose={() => setDocView(null)}
+          footerExtra={
+            doc && !doc.isImage ? (
+              <a
+                href={doc.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-2 text-xs font-semibold text-navy hover:bg-tint"
+              >
+                Open PDF in a new tab
+              </a>
+            ) : undefined
+          }
+        >
+          {docLoading ? (
+            <p className="text-center py-8 text-ink-2">Loading…</p>
+          ) : docError ? (
+            <Callout title="Couldn't load this document" variant="warn">
+              <p>{docError}</p>
+            </Callout>
+          ) : doc?.isImage ? (
+            <img src={doc.url} alt={`${DOC_LABELS[docView.kind]} for ${docView.ref}`} className="w-full rounded-lg border border-border-lt" />
+          ) : doc ? (
+            <p className="text-ink-2">
+              This document is a PDF, not an image — use "Open PDF in a new tab" below to view it.
+            </p>
+          ) : (
+            <p className="flex items-center gap-2 justify-center py-8 text-ink-2">
+              <ImageOff size={16} /> Nothing to show.
+            </p>
+          )}
         </Modal>
       ) : null}
     </>

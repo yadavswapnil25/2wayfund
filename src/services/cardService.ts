@@ -9,6 +9,7 @@ import type { Card, CurrencyCode } from "../types/data";
 export interface CardDto {
   id: number;
   type: "Debit" | "Credit";
+  card_number: string;
   last4: string;
   expiry: string;
   cvv: string;
@@ -27,6 +28,7 @@ export function mapCard(dto: CardDto): Card {
   return {
     id: String(dto.id),
     type: dto.type,
+    cardNumber: dto.card_number,
     last4: dto.last4,
     expiry: dto.expiry,
     cvv: dto.cvv,

@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Copy, Check, Gift, KeyRound, Send, UserPlus, FileText, ChevronRight, Printer, LogOut, ArrowUpRight, ArrowDownRight, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Eye, EyeOff, Copy, Check, Gift, KeyRound, Send, UserPlus, FileText, ChevronRight, Printer, ArrowUpRight, ArrowDownRight, ShieldCheck, ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { StatusTag } from "../../components/ui/Tag";
@@ -35,7 +35,7 @@ function CopyableDetail({ label, value, copied, onCopy }: CopyableDetailProps) {
 }
 
 export function AccountSummaryPage() {
-  const { store, setStore, session, balancesHidden, logout } = useApp();
+  const { store, setStore, session, balancesHidden } = useApp();
   const [acctRevealed, setAcctRevealed] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -154,22 +154,7 @@ export function AccountSummaryPage() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => navigate("/pin-security")}
-                className="inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-[#FFFBF2] px-3 py-1.5 text-[11px] font-semibold text-navy hover:bg-gold/10 transition-colors"
-              >
-                <KeyRound size={12} /> 9-Digit PIN
-              </button>
-              <button
-                type="button"
-                onClick={logout}
-                className="inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-[#FFFBF2] px-3 py-1.5 text-[11px] font-semibold text-navy hover:bg-gold/10 transition-colors"
-              >
-                <LogOut size={12} /> Log Out
-              </button>
-            </div>
+          
           </div>
 
           <div className="mt-4">

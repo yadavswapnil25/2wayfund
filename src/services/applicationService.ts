@@ -1,6 +1,6 @@
 import { formatStamp } from "../lib/dates";
 import type { Application, ApplicationAudit } from "../types/data";
-import { apiFetch } from "./apiClient";
+import { apiFetch, apiFetchBlob } from "./apiClient";
 
 /** Everything the Open an Account wizard collects across its five
  * interactive stages (2wayfund-react src/pages/public/OpenAccountPage.tsx),
@@ -293,4 +293,49 @@ export async function uploadApplicationBusinessCertificate(
   filename: string
 ): Promise<Omit<Application, "kyc">> {
   return uploadApplicationDocument(ref, "business-certificate", "business_certificate", certificate, filename);
+}
+
+export interface ApplicationDocument {
+  url: string;
+  /** Photo and signature are always images; a business certificate can
+   * be a scanned PDF instead (backend: UploadApplicationBusinessCertificateRequest
+   * allows mimes:pdf,jpeg,png,webp) — the caller needs this to know
+   * whether an <img> can render it or it needs a "download/open" link. */
+  isImage: boolean;
+}
+
+/** Shared fetch for every per-application document, staff-side — unlike
+ * the upload endpoints above (deliberately public; an applicant has no
+ * account yet), reading one back is staff-only, hence the token. The
+ * caller must URL.revokeObjectURL(result.url) when done with it (matches
+ * getMyPhotoUrl's own contract), or gets null if nothing was ever
+ * uploaded for that document. */
+async function getApplicationDocument(
+  ref: string,
+  endpoint: "photo" | "signature" | "business-certificate",
+  token: string,
+  signal?: AbortSignal
+): Promise<ApplicationDocument | null> {
+  const blob = await apiFetchBlob(`/applications/${encodeURIComponent(ref)}/${endpoint}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal,
+  });
+  if (!blob) return null;
+  return { url: URL.createObjectURL(blob), isImage: blob.type.startsWith("image/") };
+}
+
+export async function getApplicationPhoto(ref: string, token: string, signal?: AbortSignal): Promise<ApplicationDocument | null> {
+  return getApplicationDocument(ref, "photo", token, signal);
+}
+
+export async function getApplicationSignature(ref: string, token: string, signal?: AbortSignal): Promise<ApplicationDocument | null> {
+  return getApplicationDocument(ref, "signature", token, signal);
+}
+
+export async function getApplicationBusinessCertificate(
+  ref: string,
+  token: string,
+  signal?: AbortSignal
+): Promise<ApplicationDocument | null> {
+  return getApplicationDocument(ref, "business-certificate", token, signal);
 }

@@ -103,7 +103,7 @@ export function AdminPasswordPage() {
 
   return (
     <>
-      <PageHead title="Change Password" lede="Update the password used to sign in to the Compliance Console." />
+      <PageHead title="Change Password" lede="Update the password used to sign in to the Application Console." />
 
       <div className="max-w-[520px]">
         <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden mb-5">

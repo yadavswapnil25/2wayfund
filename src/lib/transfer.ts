@@ -1,5 +1,55 @@
-import type { Beneficiary, Store } from "../types/data";
+import type { Beneficiary, Store, User } from "../types/data";
 import { TRANSFER_CHANNELS, REVIEW_THRESHOLD_USD } from "../data/constants";
+
+const NETBANKING_DISABLED_MESSAGE = "Netbanking transactions are not enabled on this account. Contact support to activate netbanking.";
+
+/** Whether netbanking being switched off, or a freeze, actually stops a
+ * transfer to this beneficiary — mirrors the backend's own checks
+ * (TransferService::assertNetbankingEnabled / assertTransfersNotBlocked)
+ * so the UI never shows "blocked" for a transfer that would actually go
+ * through, or vice versa. netbankingEnabled is checked first, exactly as
+ * the backend does. A null beneficiary (none picked yet) is treated as
+ * blocked whenever the account is frozen at all, since which scope
+ * applies isn't knowable until a payee is chosen. Every freeze scope
+ * stops a transfer; "external_only" is just the one exception that lets
+ * an internal beneficiary through. */
+export function isTransferBlockedFor(user: User, beneficiary: Beneficiary | null): boolean {
+  if (!user.netbankingEnabled) return true;
+  if (!user.transfersBlocked) return false;
+  if (user.transfersBlockScope === "external_only" && beneficiary?.internal) return false;
+  return true;
+}
+
+/** The exact user-facing reason a transfer is blocked, or null if it
+ * isn't — for the banner/error text callers show, so it names the real
+ * cause (netbanking off vs. a freeze, with its reason) instead of a
+ * generic message. */
+export function transferBlockMessage(user: User, beneficiary: Beneficiary | null): string | null {
+  if (!user.netbankingEnabled) return NETBANKING_DISABLED_MESSAGE;
+  if (!isTransferBlockedFor(user, beneficiary)) return null;
+  return user.transfersBlockedReason
+    ? `Transfers are currently blocked on this account: ${user.transfersBlockedReason}. Contact support for assistance.`
+    : "Transfers are currently blocked on this account. Contact support for assistance.";
+}
+
+/** Whether netbanking being switched off, or a freeze, stops Currency
+ * Exchange — mirrors the backend's own checks
+ * (CurrencyExchangeService::assertNetbankingEnabled / assertNotFrozen).
+ * Unlike transfers, only the broadest "everything" freeze scope reaches
+ * exchange; "external_only" and "all" are scoped to Transfer Funds. */
+export function isExchangeBlockedFor(user: User): boolean {
+  return !user.netbankingEnabled || (user.transfersBlocked && user.transfersBlockScope === "everything");
+}
+
+/** The exact user-facing reason Currency Exchange is blocked, or null if
+ * it isn't — same idea as transferBlockMessage. */
+export function exchangeBlockMessage(user: User): string | null {
+  if (!user.netbankingEnabled) return NETBANKING_DISABLED_MESSAGE;
+  if (!isExchangeBlockedFor(user)) return null;
+  return user.transfersBlockedReason
+    ? `Transactions are currently blocked on this account: ${user.transfersBlockedReason}. Contact support for assistance.`
+    : "Transactions are currently blocked on this account. Contact support for assistance.";
+}
 
 /** An Indian rupee ledger can only transfer to internal 2 Way accounts and
  * other Indian beneficiaries routed by IFSC. Cross-border transfers from

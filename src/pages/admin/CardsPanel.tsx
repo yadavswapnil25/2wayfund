@@ -19,13 +19,13 @@ const CURRENCIES: CurrencyCode[] = ["USD", "EUR", "INR", "GBP", "CAD", "JPY", "A
 const FORM_OPTIONS = ["Digital", "Physical"];
 
 function emptyPayload(): AdminCardPayload {
-  return { type: "Debit", last4: "", expiry: "", cvv: "", forms: ["Digital"], capability: "", funding: "ledger", currency: "USD" };
+  return { type: "Debit", cardNumber: "", expiry: "", cvv: "", forms: ["Digital"], capability: "", funding: "ledger", currency: "USD" };
 }
 
 function toPayload(c: Card): AdminCardPayload {
   return {
     type: c.type,
-    last4: c.last4,
+    cardNumber: c.cardNumber ?? "",
     expiry: c.expiry,
     cvv: c.cvv,
     forms: c.forms,
@@ -41,10 +41,10 @@ function toPayload(c: Card): AdminCardPayload {
 }
 
 /** The Compliance Console's card management panel, shown inside a
- * customer's expanded row in Customer Accounts — matches AddFundsPanel's
- * placement and shape. A card is provisioned and maintained by the
- * institution, so this is the only place one is ever created, edited, or
- * removed; the customer's own Cards page only ever reads. */
+ * customer's expanded row in Customer Accounts. A card is provisioned
+ * and maintained by the institution, so this is the only place one is
+ * ever created, edited, or removed; the customer's own Cards page only
+ * ever reads. */
 export function CardsPanel({ userId, token }: { userId: number; token: string }) {
   const [cards, setCards] = useState<Card[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -97,8 +97,8 @@ export function CardsPanel({ userId, token }: { userId: number; token: string })
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (submitting || !editingId) return;
-    if (!/^\d{4}$/.test(payload.last4)) {
-      setFormError("Last 4 digits must be exactly 4 numeric digits.");
+    if (!/^\d{16}$/.test(payload.cardNumber)) {
+      setFormError("Card number must be exactly 16 numeric digits.");
       return;
     }
     if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(payload.expiry)) {
@@ -231,13 +231,14 @@ export function CardsPanel({ userId, token }: { userId: number; token: string })
                 <option value="prepaid">Prepaid</option>
               </Select>
             </Field>
-            <Field label="Last 4 digits" htmlFor={`card-last4-${userId}`}>
+            <Field label="Card number" htmlFor={`card-number-${userId}`} wide>
               <TextInput
-                id={`card-last4-${userId}`}
-                value={payload.last4}
-                onChange={(e) => setPayload((p) => ({ ...p, last4: e.target.value.replace(/\D/g, "").slice(0, 4) }))}
-                placeholder="4417"
+                id={`card-number-${userId}`}
+                value={payload.cardNumber}
+                onChange={(e) => setPayload((p) => ({ ...p, cardNumber: e.target.value.replace(/\D/g, "").slice(0, 16) }))}
+                placeholder="4111111111114417"
                 inputMode="numeric"
+                maxLength={16}
               />
             </Field>
             <Field label="Expiry (MM/YY)" htmlFor={`card-expiry-${userId}`}>

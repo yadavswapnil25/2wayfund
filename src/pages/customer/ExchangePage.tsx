@@ -7,7 +7,8 @@ import { Btn } from "../../components/ui/Button";
 import { Note } from "../../components/ui/Misc";
 import { useApp } from "../../state/AppContext";
 import { formatCode } from "../../lib/format";
-import { getBalances } from "../../services/meService";
+import { exchangeBlockMessage } from "../../lib/transfer";
+import { getBalances, getMe } from "../../services/meService";
 import { confirmExchange, initiateExchange, type ExchangeConfirmation, type ExchangeQuote } from "../../services/exchangeService";
 import { ApiError } from "../../services/apiClient";
 import type { Balance, CurrencyCode } from "../../types/data";
@@ -32,7 +33,7 @@ type Stage = "quote" | "otp" | "done";
  * like self-service registration: a quote is emailed as a one-time code
  * first, and nothing moves until that code is entered back here. */
 export function ExchangePage() {
-  const { store, session } = useApp();
+  const { store, setStore, session } = useApp();
   const [stage, setStage] = useState<Stage>("quote");
 
   const [balances, setBalances] = useState<Balance[]>(store.balances);
@@ -64,17 +65,39 @@ export function ExchangePage() {
     }
   }, [session.token]);
 
+  // Same reasoning as the balances above: netbankingEnabled/transfersBlocked
+  // are only fresh once some other page has refreshed /me, and a customer
+  // can land here first — without this, a real netbanking-disabled
+  // account would show no warning until the (also real) backend rejects
+  // the quote at submit time.
+  const refreshMe = useCallback(
+    (signal?: AbortSignal) => {
+      if (!session.token) return Promise.resolve();
+      return getMe(session.token, signal)
+        .then((me) => setStore((s) => ({ ...s, user: { ...s.user, ...me } })))
+        .catch(() => undefined);
+    },
+    [session.token, setStore]
+  );
+
   useEffect(() => {
     const controller = new AbortController();
     void loadBalances(controller.signal);
+    void refreshMe(controller.signal);
     return () => controller.abort();
-  }, [loadBalances]);
+  }, [loadBalances, refreshMe]);
 
   const fromBalance = balances.find((b) => b.currency === fromCurrency);
+  const blockMessage = exchangeBlockMessage(store.user);
 
   async function submitQuote() {
     if (submitting) return;
     setError(null);
+
+    if (blockMessage) {
+      setError(blockMessage);
+      return;
+    }
 
     const numeric = Number(amount);
     if (!amount || Number.isNaN(numeric) || numeric <= 0) {
@@ -146,6 +169,10 @@ export function ExchangePage() {
               <Note danger className="mb-3.5">
                 {error}
               </Note>
+            ) : blockMessage && stage === "quote" ? (
+              <Note danger className="mb-3.5">
+                {blockMessage}
+              </Note>
             ) : null}
 
             {stage === "quote" ? (
@@ -192,7 +219,7 @@ export function ExchangePage() {
                   </div>
                 </Field>
 
-                <Btn variant="block" onClick={() => void submitQuote()} disabled={submitting}>
+                <Btn variant="block" onClick={() => void submitQuote()} disabled={submitting || !!blockMessage}>
                   {submitting ? "Sending code…" : "Get Quote & Send Code"}
                 </Btn>
               </>
