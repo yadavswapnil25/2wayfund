@@ -90,6 +90,26 @@ export async function initiateInternalBeneficiary(payload: InitiateInternalPaylo
   return mapBeneficiary(dto);
 }
 
+export type InternalAccountLookup = { found: false } | { found: true; panelCode: string; cif: string };
+
+interface InternalAccountLookupDto {
+  found: boolean;
+  panel_code?: string;
+  cif?: string;
+}
+
+/** Looks up a real 2 Way Fund account by number — powers the "Add
+ * Beneficiary" form's panel code/CIF auto-fill. `found: false` is a
+ * normal outcome (a partial or wrong account number as the customer
+ * types), not an error. */
+export async function lookupInternalAccount(accountNumber: string, token: string, signal?: AbortSignal): Promise<InternalAccountLookup> {
+  const dto = await apiFetch<InternalAccountLookupDto>(`/beneficiaries/internal/lookup?account=${encodeURIComponent(accountNumber)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal,
+  });
+  return dto.found && dto.panel_code && dto.cif ? { found: true, panelCode: dto.panel_code, cif: dto.cif } : { found: false };
+}
+
 export async function confirmBeneficiary(id: string, otp: string, token: string): Promise<Beneficiary> {
   const dto = await apiFetch<BeneficiaryDto>(`/beneficiaries/${id}/confirm`, {
     method: "POST",

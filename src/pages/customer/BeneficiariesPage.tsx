@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { UserPlus } from "lucide-react";
+import { CheckCircle2, UserPlus } from "lucide-react";
 import { PageHead } from "../../components/ui/Flow";
 import { Field, FormActions, FormGrid, Select, TextInput } from "../../components/ui/Field";
 import { Btn } from "../../components/ui/Button";
@@ -8,11 +8,12 @@ import { Chip, Note, TypeTab } from "../../components/ui/Misc";
 import { useApp } from "../../state/AppContext";
 import type { Beneficiary } from "../../types/data";
 import { BANK_PRESETS } from "../../data/constants";
-import { IFSC_FORMAT, PANEL_CODE_FORMAT, CIF_FORMATS } from "../../lib/validators";
+import { CIF_FORMATS, IFSC_FORMAT } from "../../lib/validators";
 import {
   confirmBeneficiary,
   initiateExternalBeneficiary,
   initiateInternalBeneficiary,
+  lookupInternalAccount,
   type InitiateExternalPayload,
   type InitiateInternalPayload,
 } from "../../services/beneficiaryService";
@@ -71,10 +72,65 @@ export function BeneficiariesPage() {
   const [panelCode, setPanelCode] = useState("");
   const [cif, setCif] = useState("");
   const [verifyResult, setVerifyResult] = useState<string | null>(null);
+  // "found" means panelCode/cif were just auto-filled from a real account
+  // and are locked read-only; any other state leaves them open for
+  // manual entry, exactly as before this account-lookup existed.
+  const [internalLookup, setInternalLookup] = useState<"idle" | "checking" | "found" | "not-found">("idle");
+  const panelCifLocked = internalLookup === "found";
 
   function setErr(id: string, msg: string | null) {
     setErrors((e) => ({ ...e, [id]: msg }));
   }
+
+  // Debounced, real-account lookup as the customer types — auto-fills
+  // and locks panel code/CIF the moment the account number matches a
+  // real 2 Way Fund customer, so there's nothing left to type (or get
+  // wrong) for the two fields most people don't have memorised.
+  useEffect(() => {
+    // internalLookup reflects the *previous* account number's outcome at
+    // this point — this clears a stale auto-filled panel/CIF the instant
+    // the account number changes again, before the new lookup resolves.
+    if (internalLookup === "found") {
+      setPanelCode("");
+      setCif("");
+    }
+
+    const token = session.token;
+    if (!token || !CIF_FORMATS.account.re.test(intAccount)) {
+      setInternalLookup("idle");
+      return;
+    }
+
+    const controller = new AbortController();
+    setInternalLookup("checking");
+    const handle = setTimeout(() => {
+      void lookupInternalAccount(intAccount, token, controller.signal)
+        .then((result) => {
+          if (result.found) {
+            setPanelCode(result.panelCode);
+            setCif(result.cif);
+            setInternalLookup("found");
+          } else {
+            setPanelCode("");
+            setCif("");
+            setInternalLookup("not-found");
+          }
+        })
+        .catch(() => {
+          if (controller.signal.aborted) return;
+          setInternalLookup("not-found");
+        });
+    }, 350);
+
+    return () => {
+      clearTimeout(handle);
+      controller.abort();
+    };
+    // internalLookup is deliberately excluded — it's read only to detect
+    // the *previous* run's outcome, and including it would re-trigger
+    // this same effect the instant it sets that state itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intAccount, session.token]);
 
   function clearAll() {
     setName("");
@@ -86,6 +142,7 @@ export function BeneficiariesPage() {
     setIntAccount("");
     setPanelCode("");
     setCif("");
+    setInternalLookup("idle");
     setVerifyResult(null);
     setErrors({});
     setFormError(null);
@@ -165,23 +222,11 @@ export function BeneficiariesPage() {
     } else setErr("bf-internal-acct", null);
 
     const p = panelCode.trim().toUpperCase();
-    if (!p) {
-      setErr("bf-panelcode", "Enter the assigned panel number.");
-      ok = false;
-    } else if (!PANEL_CODE_FORMAT.test(p)) {
-      setErr("bf-panelcode", "Panel numbers follow the form PNLXX0000.");
-      ok = false;
-    } else setErr("bf-panelcode", null);
+    setErr("bf-panelcode", null);
     setPanelCode(p);
 
     const c = cif.trim().toUpperCase();
-    if (!c) {
-      setErr("bf-cif", "Enter the customer’s ID (CIF).");
-      ok = false;
-    } else if (!CIF_FORMATS.reference.re.test(c)) {
-      setErr("bf-cif", CIF_FORMATS.reference.hint);
-      ok = false;
-    } else setErr("bf-cif", null);
+    setErr("bf-cif", null);
     setCif(c);
 
     return ok;
@@ -273,7 +318,7 @@ export function BeneficiariesPage() {
               <>
                 <div className="grid grid-cols-2 gap-2.5 mb-1.5">
                   <TypeTab active={tab === "external"} onClick={() => setTab("external")}>
-                    Others
+                    Indian Commercial Bank
                   </TypeTab>
                   <TypeTab active={tab === "internal"} onClick={() => setTab("internal")}>
                     2 Way Fund (Internal)
@@ -289,6 +334,7 @@ export function BeneficiariesPage() {
                           {bp.short}
                         </Chip>
                       ))}
+                      <Chip onClick={() => setBankName("")}>Other</Chip>
                     </div>
                     <FormGrid>
                       <Field label="Beneficiary account holder name" required wide error={errors["bf-name"]}>
@@ -322,22 +368,66 @@ export function BeneficiariesPage() {
                 ) : (
                   <div>
                     <FormGrid>
-                      <Field label="2 Way Fund account number" required wide error={errors["bf-internal-acct"]}>
+                      <Field
+                        label="2 Way Fund account number"
+                        required
+                        wide
+                        error={errors["bf-internal-acct"]}
+                        hint={
+                          internalLookup === "checking"
+                            ? "Checking…"
+                            : internalLookup === "not-found"
+                              ? "No 2 Way Fund account matches this number."
+                              : undefined
+                        }
+                      >
                         <TextInput value={intAccount} onChange={(e) => setIntAccount(e.target.value)} placeholder="e.g. 902200118855" hasError={!!errors["bf-internal-acct"]} />
                       </Field>
-                      <Field label="Assigned panel number" required error={errors["bf-panelcode"]}>
-                        <TextInput value={panelCode} onChange={(e) => setPanelCode(e.target.value)} placeholder="e.g. PNLIN4402" hasError={!!errors["bf-panelcode"]} />
+                      <Field
+                        label="Assigned panel number"
+                        required
+                        error={errors["bf-panelcode"]}
+                        hint={panelCifLocked ? "Auto-filled from the account above." : undefined}
+                      >
+                        <TextInput
+                          value={panelCode}
+                          onChange={(e) => setPanelCode(e.target.value)}
+                          placeholder="e.g. PNLIN4402"
+                          hasError={!!errors["bf-panelcode"]}
+                          readOnly={panelCifLocked}
+                          className={panelCifLocked ? "bg-tint cursor-not-allowed" : undefined}
+                        />
                       </Field>
-                      <Field label="Customer ID (CIF)" required error={errors["bf-cif"]}>
-                        <TextInput value={cif} onChange={(e) => setCif(e.target.value)} placeholder="e.g. 2WFMP04817" hasError={!!errors["bf-cif"]} />
+                      <Field
+                        label="Customer ID (CIF)"
+                        required
+                        error={errors["bf-cif"]}
+                        hint={panelCifLocked ? "Auto-filled from the account above." : undefined}
+                      >
+                        <TextInput
+                          value={cif}
+                          onChange={(e) => setCif(e.target.value)}
+                          placeholder="e.g. 2WFMP04817"
+                          hasError={!!errors["bf-cif"]}
+                          readOnly={panelCifLocked}
+                          className={panelCifLocked ? "bg-tint cursor-not-allowed" : undefined}
+                        />
                       </Field>
                     </FormGrid>
-                    {verifyResult ? (
+                    {panelCifLocked ? (
+                      <div className="rounded-2xl border border-[#A8D4BB] bg-[#F0F8F3] px-4.5 py-4 mt-3 flex items-start gap-2.5">
+                        <CheckCircle2 size={16} className="text-pos flex-none mt-0.5" />
+                        <p className="m-0 text-[12.5px] text-ink">
+                          This account number matches a real 2 Way Fund account — its panel number and Customer ID have been filled in
+                          automatically and can't be edited. Select Save Internal Payee to register it.
+                        </p>
+                      </div>
+                    ) : verifyResult ? (
                       <div className="rounded-2xl border border-border-lt bg-[#EAF1F9] px-4.5 py-4 mt-3">
                         <h3 className="m-0 text-[13px] font-bold text-navy">Account details verified</h3>
                         <p className="m-0 mt-1.5 text-[12.5px] text-ink">
-                          Account number, panel number and customer ID are all correctly formatted. This is a format check only — no external
-                          directory is queried. Select Save Internal Payee to register it.
+                          Account number, panel number and customer ID are all correctly formatted. This is a format check only — the account will
+                          be matched against real records when you select Save Internal Payee.
                         </p>
                       </div>
                     ) : null}

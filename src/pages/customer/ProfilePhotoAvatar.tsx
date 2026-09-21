@@ -46,11 +46,11 @@ export function ProfilePhotoAvatar({ name, onError }: { name: string; onError: (
 
   return (
     <>
-      <span className="relative flex-none w-9 h-9 rounded-full border-2 border-gold/40 overflow-hidden">
+      <span className="relative flex-none w-20 h-20 rounded-full border-[3px] border-gold/40 overflow-hidden">
         {photoUrl ? (
           <img src={photoUrl} alt={name} className="w-full h-full object-cover" />
         ) : (
-          <span className="w-full h-full bg-gradient-to-br from-[#E8D6A8] to-gold text-navy-dk text-[13px] font-bold flex items-center justify-center">
+          <span className="w-full h-full bg-gradient-to-br from-[#E8D6A8] to-gold text-navy-dk text-2xl font-bold flex items-center justify-center">
             {monogram(name)}
           </span>
         )}
@@ -63,12 +63,12 @@ export function ProfilePhotoAvatar({ name, onError }: { name: string; onError: (
           className="absolute inset-0 flex items-center justify-center bg-black/25 hover:bg-black/50 text-white transition-colors disabled:cursor-wait"
         >
           {uploading ? (
-            <span className="w-3 h-3 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+            <span className="w-5 h-5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
           ) : (
-            <Camera size={13} />
+            <Camera size={22} />
           )}
         </button>
-        <span className="absolute -right-0.5 -bottom-0.5 w-2.5 h-2.5 rounded-full bg-pos border-2 border-white pointer-events-none" />
+        <span className="absolute right-0.5 bottom-0.5 w-3.5 h-3.5 rounded-full bg-pos border-2 border-white pointer-events-none" />
       </span>
       <input
         ref={inputRef}
