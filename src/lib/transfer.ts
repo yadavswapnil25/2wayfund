@@ -11,12 +11,14 @@ const NETBANKING_DISABLED_MESSAGE = "Netbanking transactions are not enabled on 
  * the backend does. A null beneficiary (none picked yet) is treated as
  * blocked whenever the account is frozen at all, since which scope
  * applies isn't knowable until a payee is chosen. Every freeze scope
- * stops a transfer; "external_only" is just the one exception that lets
- * an internal beneficiary through. */
+ * stops a transfer except the two mirrored exceptions: "external_only"
+ * still lets an internal beneficiary through, "internal_only" still lets
+ * an external one through. */
 export function isTransferBlockedFor(user: User, beneficiary: Beneficiary | null): boolean {
   if (!user.netbankingEnabled) return true;
   if (!user.transfersBlocked) return false;
   if (user.transfersBlockScope === "external_only" && beneficiary?.internal) return false;
+  if (user.transfersBlockScope === "internal_only" && beneficiary !== null && !beneficiary.internal) return false;
   return true;
 }
 

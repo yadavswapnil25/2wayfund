@@ -50,11 +50,20 @@ export interface CreateAccountResult {
 export interface CustomerAccountDto {
   id: number;
   name: string;
+  father_name: string | null;
+  dob: string | null;
   email: string;
   mobile: string | null;
   reference: string;
   account_number: string;
+  country: string | null;
+  ifsc: string | null;
+  micr: string | null;
+  branch: string | null;
   panel_code: string;
+  resident_address: string | null;
+  office_address: string | null;
+  has_photo: boolean;
   account_tier: string;
   segment: string;
   pan: string | null;
@@ -88,14 +97,18 @@ interface AccountListDto {
 }
 
 /** Every customer account, however it was provisioned (application
- * approval or the "Open Account" tool) — staff-only, hence the token. */
+ * approval or the "Open Account" tool) — staff-only, hence the token.
+ * Every filter given narrows the results further (AND, not OR). */
 export async function listCustomerAccounts(
   token: string,
-  filters: { email?: string; page?: number } = {},
+  filters: { email?: string; reference?: string; accountNumber?: string; mobile?: string; page?: number } = {},
   signal?: AbortSignal
 ): Promise<AccountListResult> {
   const params = new URLSearchParams();
   if (filters.email) params.set("email", filters.email);
+  if (filters.reference) params.set("reference", filters.reference);
+  if (filters.accountNumber) params.set("account_number", filters.accountNumber);
+  if (filters.mobile) params.set("mobile", filters.mobile);
   if (filters.page) params.set("page", String(filters.page));
   const query = params.toString();
 
@@ -236,7 +249,7 @@ export async function debitCustomerAccount(
  * (Beneficiary.internal); "all" stops every transfer but leaves Currency
  * Exchange untouched; "everything" additionally stops Currency Exchange
  * — the broadest freeze. Only meaningful while blocked is true. */
-export type TransferBlockScope = "external_only" | "all" | "everything";
+export type TransferBlockScope = "external_only" | "internal_only" | "all" | "everything";
 
 interface TransferBlockDto {
   transfers_blocked: boolean;
@@ -266,21 +279,6 @@ export async function updateCustomerTransferBlock(
   });
 
   return { blocked: dto.transfers_blocked, reason: dto.transfers_blocked_reason, scope: dto.transfers_block_scope };
-}
-
-/** The Compliance Console's "Netbanking Access" control — switches
- * Transfer Funds / Currency Exchange on or off for a customer's account
- * entirely. Independent of the Freeze Account controls above; login and
- * every other account action are unaffected either way. Staff only,
- * hence the token. */
-export async function updateNetbankingAccess(userId: number, enabled: boolean, token: string): Promise<boolean> {
-  const dto = await apiFetch<{ netbanking_enabled: boolean }>(`/admin/accounts/${userId}/netbanking`, {
-    method: "PUT",
-    headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ enabled }),
-  });
-
-  return dto.netbanking_enabled;
 }
 
 /** The Compliance Console's "Transaction Limit" control — sets a

@@ -31,7 +31,7 @@ export interface User {
    * "everything" additionally stops Currency Exchange too. */
   transfersBlocked: boolean;
   transfersBlockedReason: string | null;
-  transfersBlockScope: "external_only" | "all" | "everything" | null;
+  transfersBlockScope: "external_only" | "internal_only" | "all" | "everything" | null;
   /** Whether Transfer Funds / Currency Exchange are switched on for this
    * account at all — set by staff via the Compliance Console's
    * "Netbanking Access" control. Independent of transfersBlocked: login
@@ -40,6 +40,10 @@ export interface User {
   netbankingEnabled: boolean;
   pin: string;
   pinStatus: string;
+  /** The Security PIN — a second login factor, separate from pinStatus
+   * (the 9-digit transaction PIN). "Active" makes login ask for it after
+   * Customer ID + password. */
+  securityPinStatus: string;
   kycStatus: string;
   lastLogin: string;
   hasPhoto: boolean;
@@ -111,13 +115,6 @@ export interface Card {
   prepaid?: number;
 }
 
-export interface CardLimit {
-  card: string;
-  capability: string;
-  limit: string;
-  sample: boolean;
-}
-
 export interface FeeRule {
   transactionType: string;
   charge: string;
@@ -156,6 +153,14 @@ export interface Nominee {
   guardianName: string;
   guardianRelationship: string;
   guardianAddress: string;
+  hasIdProof: boolean;
+  /** "Awaiting OTP" never appears in a list the customer sees — only
+   * "Active" (the current nominee) and "Pending Approval" (a submitted
+   * edit awaiting staff review) do. */
+  status: "Awaiting OTP" | "Pending Approval" | "Active";
+  /** Only meaningful on the Active nominee — true once its removal has
+   * been requested and is awaiting staff approval. */
+  removalRequested: boolean;
   registered: string;
 }
 
@@ -334,7 +339,6 @@ export interface Store {
   transactions: Transaction[];
   tiers: Tier[];
   cards: Card[];
-  cardLimits: CardLimit[];
   feeRules: FeeRule[];
   feeExamples: FeeExample[];
   openingSteps: string[];

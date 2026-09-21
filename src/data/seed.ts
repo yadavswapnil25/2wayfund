@@ -30,6 +30,7 @@ export function createSeedStore(): Store {
       // shown — and changed in place by the 9-Digit PIN & Security page.
       pin: "418200773",
       pinStatus: "Active",
+      securityPinStatus: "Not configured",
       kycStatus: "Verified",
       lastLogin: "07 Sep 2026, 21:24:40 IST",
       hasPhoto: false,
@@ -134,13 +135,6 @@ export function createSeedStore(): Store {
       { id: "seed-credit", type: "Credit", last4: "8206", expiry: "09/29", cvv: "820", forms: ["Digital", "Physical"], capability: "High-value swipe and transaction capability over supported international payment networks.", funding: "credit", currency: "USD", creditLimit: 50000, outstanding: 12400 },
     ],
 
-    cardLimits: [
-      { card: "Debit", capability: "ATM cash withdrawal", limit: "USD 20,000", sample: false },
-      { card: "Debit", capability: "Point-of-sale daily cap", limit: "USD 25,000", sample: true },
-      { card: "Credit", capability: "High-value transaction ceiling", limit: "₹10,00,00,000", sample: false },
-      { card: "Credit", capability: "Statement cycle", limit: "30 days", sample: true },
-    ],
-
     feeRules: [
       { transactionType: "2 Way Fund → 2 Way Fund internal transfer", charge: "0%", notes: "No charge applied between two accounts held on the platform." },
       { transactionType: "Eligible standard transaction", charge: "2%", notes: "Standard commission deducted at settlement." },
@@ -203,7 +197,8 @@ export function createSeedStore(): Store {
       {
         id: "nom1", name: "Rohan Sharma", relationship: "Spouse", dob: "1989-11-02",
         address: "14 Sample Street, Andheri East, Mumbai 400069, India",
-        guardianName: "", guardianRelationship: "", guardianAddress: "", registered: "12 Aug 2026 10:20",
+        guardianName: "", guardianRelationship: "", guardianAddress: "", hasIdProof: true,
+        status: "Active", removalRequested: false, registered: "12 Aug 2026 10:20",
       },
     ],
 

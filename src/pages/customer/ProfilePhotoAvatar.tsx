@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { Camera } from "lucide-react";
 import { useApp } from "../../state/AppContext";
 import { monogram } from "../../lib/format";
 import { updateMyPhoto } from "../../services/meService";
@@ -60,13 +59,9 @@ export function ProfilePhotoAvatar({ name, onError }: { name: string; onError: (
           disabled={uploading}
           aria-label="Change profile photo"
           title="Change profile photo"
-          className="absolute inset-0 flex items-center justify-center bg-black/25 hover:bg-black/50 text-white transition-colors disabled:cursor-wait"
+          className="absolute inset-0 flex items-center justify-center bg-transparent hover:bg-black/20 text-white transition-colors disabled:cursor-wait"
         >
-          {uploading ? (
-            <span className="w-5 h-5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-          ) : (
-            <Camera size={22} />
-          )}
+          {uploading ? <span className="w-5 h-5 rounded-full border-2 border-white/40 border-t-white animate-spin" /> : null}
         </button>
         <span className="absolute right-0.5 bottom-0.5 w-3.5 h-3.5 rounded-full bg-pos border-2 border-white pointer-events-none" />
       </span>

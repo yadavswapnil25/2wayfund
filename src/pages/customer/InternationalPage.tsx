@@ -3,13 +3,21 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageHead } from "../../components/ui/Flow";
 import { LoadingBlock, Note } from "../../components/ui/Misc";
-import { StatusTag } from "../../components/ui/Tag";
+import { StatusTag, Tag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
 import { formatCode } from "../../lib/format";
 import { isoToDisplay, today } from "../../lib/dates";
 import { getTransactions } from "../../services/meService";
 import { ApiError } from "../../services/apiClient";
 import type { Transaction } from "../../types/data";
+
+/** Admin credits/debits move money in a foreign currency but never go
+ * through actual conversion math — no rate, no commission. Distinct from
+ * a real Currency Exchange leg or a cross-border transfer, both of which
+ * genuinely apply the published 2% commission. */
+function isManualEntry(t: Transaction): boolean {
+  return t.channel === "Admin credit" || t.channel === "Admin debit";
+}
 
 export function InternationalPage() {
   const { store, session } = useApp();
@@ -49,7 +57,14 @@ export function InternationalPage() {
   }, [transactions]);
 
   const totals = useMemo(() => {
-    const live = rows.filter((t) => !t.reversed);
+    // The INR-equivalent Credits/Debits totals only ever sum entries that
+    // actually went through currency conversion (a real exchange or
+    // cross-border transfer) — converting a manual admin credit's raw
+    // amount into "INR equivalent" would imply a conversion that never
+    // happened, exactly what the Manual credit/debit tag is there to
+    // rule out. Manual entries still count toward Entries below, since
+    // that's just a row count, not a currency conversion.
+    const live = rows.filter((t) => !t.reversed && !isManualEntry(t));
     const toInr = (t: (typeof rows)[number]) => (t.amount / store.rates[t.currency]) * store.rates.INR;
     const credits = live.filter((t) => t.direction === "credit").reduce((s, t) => s + toInr(t), 0);
     const debits = live.filter((t) => t.direction === "debit").reduce((s, t) => s + toInr(t), 0);
@@ -84,7 +99,7 @@ export function InternationalPage() {
 
       <PageHead
         title="International Transactions"
-        lede="Cross-border settlement routed by SWIFT, with currency conversion and the standard commission applied per the published schedule."
+        lede="Cross-border settlement and foreign-currency activity on this account. Currency exchanges and cross-border transfers apply the published 2% commission; entries tagged Manual credit/debit are direct administrator adjustments with no conversion involved."
       />
 
       {transactions === null ? (
@@ -101,12 +116,12 @@ export function InternationalPage() {
         <div className="rounded-2xl border border-border-lt bg-white px-4.5 py-4 shadow-sm">
           <span className="block text-[10.5px] uppercase text-ink-2 font-semibold">Credits</span>
           <div className="mt-1 font-num tabular-nums text-[22px] font-bold text-pos">{formatCode(totals.credits, "INR")}</div>
-          <span className="text-[11px] text-ink-2">INR equivalent, excluding reversed</span>
+          <span className="text-[11px] text-ink-2">INR equivalent of real conversions, excluding reversed and manual entries</span>
         </div>
         <div className="rounded-2xl border border-border-lt bg-white px-4.5 py-4 shadow-sm">
           <span className="block text-[10.5px] uppercase text-ink-2 font-semibold">Debits</span>
           <div className="mt-1 font-num tabular-nums text-[22px] font-bold text-neg">{formatCode(totals.debits, "INR")}</div>
-          <span className="text-[11px] text-ink-2">INR equivalent, excluding reversed</span>
+          <span className="text-[11px] text-ink-2">INR equivalent of real conversions, excluding reversed and manual entries</span>
         </div>
         <div className="rounded-2xl border border-[#DDC98B] bg-[#FBF4E1] px-4.5 py-4 shadow-sm">
           <span className="block text-[10.5px] uppercase text-amber font-semibold">Under review</span>
@@ -144,7 +159,7 @@ export function InternationalPage() {
         <div className="px-4.5 sm:px-5 py-4 border-b border-border-lt">
           <h3 className="m-0 text-[14.5px] font-bold text-navy">Cross-Border Entries</h3>
           <p className="m-0 mt-0.5 text-[11px] text-ink-2">
-            {totals.count} {totals.count === 1 ? "entry" : "entries"} · SWIFT-routed settlement across currencies
+            {totals.count} {totals.count === 1 ? "entry" : "entries"} · foreign-currency settlement and administrator adjustments
           </p>
         </div>
 
@@ -170,6 +185,7 @@ export function InternationalPage() {
                     <span className="text-[9.5px] uppercase font-bold tracking-wide text-ink-2 bg-tint border border-border-lt rounded px-1.5 py-0.5">
                       {t.route}
                     </span>
+                    {isManualEntry(t) ? <Tag variant="submitted">{t.direction === "credit" ? "Manual credit" : "Manual debit"}</Tag> : null}
                   </div>
                   <p className="m-0 mt-0.5 text-[11px] text-ink-2 truncate">
                     {t.counterparty} · {isoToDisplay(t.valueIso)} · Ref {t.ref}
@@ -201,9 +217,10 @@ export function InternationalPage() {
       )}
 
       <Note>
-        Amounts are shown in the currency of the debit ledger. Conversion detail and commission for any entry appear on its receipt. A transfer
-        counts as international the moment it crosses a border or converts currency — everything that stays in India and settles in rupees
-        appears under <Link to="/domestic">Domestic (INR)</Link>.
+        Amounts are shown in the currency of the debit ledger. Entries tagged <strong>Manual credit</strong>/<strong>Manual debit</strong> were
+        added directly by an administrator and involve no currency conversion or commission — everything else here is a real currency exchange
+        or cross-border transfer, both charged the published 2% commission. A transfer counts as international the moment it crosses a border or
+        converts currency — everything that stays in India and settles in rupees appears under <Link to="/domestic">Domestic (INR)</Link>.
       </Note>
     </>
   );

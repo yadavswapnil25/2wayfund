@@ -40,6 +40,8 @@ export const ROUTES: RouteDef[] = [
   { path: "/open-customer-account", tab: "Open Account", crumb: "Administration › Open Account", group: "Administration", access: "admin" },
   { path: "/customer-accounts", tab: "Customer Accounts", crumb: "Administration › Customer Accounts", group: "Administration", access: "admin" },
   { path: "/add-funds", tab: "Add Funds", crumb: "Administration › Add Funds", group: "Administration", access: "admin" },
+  { path: "/debit-funds", tab: "Debit Funds", crumb: "Administration › Debit Funds", group: "Administration", access: "admin" },
+  { path: "/nominee-approvals", tab: "Nominee Approvals", crumb: "Administration › Nominee Approvals", group: "Administration", access: "admin" },
   { path: "/messages", tab: "Customer Messaging", crumb: "Administration › Customer Messaging", group: "Administration", access: "admin" },
   { path: "/admin-password", tab: "Change Password", crumb: "Administration › Change Password", group: "Administration", access: "admin" },
   { path: "/admin-referrals", tab: "Referrals", crumb: "Administration › Referrals", group: "Administration", access: "admin" },
@@ -133,7 +135,6 @@ export const BANK_PRESETS: { short: string; full: string }[] = [
   { short: "ICICI", full: "ICICI Bank" },
   { short: "Punjab", full: "Punjab National Bank" },
   { short: "Axis", full: "Axis Bank" },
-  { short: "Bank", full: "Bank of Baroda" },
 ];
 
 export interface Sector {

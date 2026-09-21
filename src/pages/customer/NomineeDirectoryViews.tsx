@@ -20,11 +20,24 @@ interface DirectoryProps {
   editingId: string | null;
   submitting: boolean;
   onEdit: (nominee: Nominee) => void;
-  onRemove: (id: string) => void;
+  onRequestRemoval: (id: string) => void;
+  onCancelRemoval: (id: string) => void;
+  onCancelChange: (id: string) => void;
+  onViewIdProof: (nominee: Nominee) => void;
 }
 
-export function NomineeDirectory({ nominees, editingId, submitting, onEdit, onRemove }: DirectoryProps) {
-  const existing = nominees[0] ?? null;
+export function NomineeDirectory({
+  nominees,
+  editingId,
+  submitting,
+  onEdit,
+  onRequestRemoval,
+  onCancelRemoval,
+  onCancelChange,
+  onViewIdProof,
+}: DirectoryProps) {
+  const active = nominees.find((n) => n.status === "Active") ?? null;
+  const pendingChange = nominees.find((n) => n.status === "Pending Approval") ?? null;
 
   return (
     <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
@@ -36,7 +49,7 @@ export function NomineeDirectory({ nominees, editingId, submitting, onEdit, onRe
           <div>
             <h3 className="m-0 text-[14.5px] font-bold text-navy">Registered Nominee Directory</h3>
             <p className="m-0 mt-0.5 text-[11px] text-ink-2">
-              {existing ? `${existing.name} is registered as your nominee` : "No nominee registered on your NetBanking profile"}
+              {active ? `${active.name} is registered as your nominee` : "No nominee registered on your NetBanking profile"}
             </p>
           </div>
         </div>
@@ -52,6 +65,7 @@ export function NomineeDirectory({ nominees, editingId, submitting, onEdit, onRe
           {nominees.map((nm) => {
             const nmMinor = isMinorDob(nm.dob);
             const isOpen = editingId === nm.id;
+            const isPendingChange = nm.status === "Pending Approval";
             return (
               <div
                 key={nm.id}
@@ -65,6 +79,8 @@ export function NomineeDirectory({ nominees, editingId, submitting, onEdit, onRe
                     <strong className="text-[13px] text-ink truncate">{nm.name}</strong>
                     <Tag variant="processing">{nm.relationship}</Tag>
                     {nmMinor ? <Tag variant="pending">Minor</Tag> : null}
+                    {isPendingChange ? <Tag variant="pending">Change pending approval</Tag> : null}
+                    {nm.status === "Active" && nm.removalRequested ? <Tag variant="pending">Removal pending approval</Tag> : null}
                   </div>
                   <p className="m-0 mt-0.5 text-[11px] text-ink-2 truncate">
                     DOB: {nm.dob} · Age {ageOn(nm.dob, todayIso())}
@@ -78,22 +94,55 @@ export function NomineeDirectory({ nominees, editingId, submitting, onEdit, onRe
                   <p className="m-0 mt-0.5 text-[11px] text-ink-2 truncate">{nm.address}</p>
                 </div>
                 <div className="flex-none flex items-center gap-2 mt-2 sm:mt-0 w-full sm:w-auto justify-end">
-                  <button
-                    type="button"
-                    onClick={() => onEdit(nm)}
-                    disabled={submitting}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-navy-dk bg-gradient-to-b from-navy-lt to-navy px-3.5 py-1.5 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onRemove(nm.id)}
-                    disabled={submitting}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-semibold text-ink hover:bg-tint disabled:opacity-50"
-                  >
-                    Remove
-                  </button>
+                  {nm.hasIdProof ? (
+                    <button
+                      type="button"
+                      onClick={() => onViewIdProof(nm)}
+                      disabled={submitting}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-semibold text-ink hover:bg-tint disabled:opacity-50"
+                    >
+                      View ID proof
+                    </button>
+                  ) : null}
+
+                  {isPendingChange ? (
+                    <button
+                      type="button"
+                      onClick={() => onCancelChange(nm.id)}
+                      disabled={submitting}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-semibold text-ink hover:bg-tint disabled:opacity-50"
+                    >
+                      Withdraw request
+                    </button>
+                  ) : nm.removalRequested ? (
+                    <button
+                      type="button"
+                      onClick={() => onCancelRemoval(nm.id)}
+                      disabled={submitting}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-semibold text-ink hover:bg-tint disabled:opacity-50"
+                    >
+                      Withdraw removal request
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onEdit(nm)}
+                        disabled={submitting || !!pendingChange}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-navy-dk bg-gradient-to-b from-navy-lt to-navy px-3.5 py-1.5 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50"
+                      >
+                        Request Change
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onRequestRemoval(nm.id)}
+                        disabled={submitting || !!pendingChange}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-semibold text-ink hover:bg-tint disabled:opacity-50"
+                      >
+                        Request Removal
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             );
@@ -104,7 +153,8 @@ export function NomineeDirectory({ nominees, editingId, submitting, onEdit, onRe
       <div className="px-4.5 sm:px-5 py-3.5 border-t border-border-lt">
         <Note>
           A nominee under 18 cannot receive funds directly, so a guardian must be named at registration — the guardian holds the entitlement until
-          the nominee reaches majority.
+          the nominee reaches majority. Once a nominee is registered, any change to their details or a removal must be approved by the bank
+          before it takes effect.
         </Note>
       </div>
     </div>

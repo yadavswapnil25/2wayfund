@@ -8,12 +8,56 @@ import { formatCode } from "../../lib/format";
 import { listCards } from "../../services/cardService";
 import { getMe } from "../../services/meService";
 import { ApiError } from "../../services/apiClient";
-import type { Card } from "../../types/data";
+import type { Card, CurrencyCode } from "../../types/data";
 
 function fundingLabel(c: Card): string {
   if (c.funding === "credit") return "Revolving credit";
   if (c.funding === "prepaid") return "Prepaid";
   return `Linked to ${c.currency} ledger`;
+}
+
+/** Illustrative order-of-magnitude for the two published limits this
+ * prototype has no real per-card field for (ATM withdrawal cap, credit
+ * high-value ceiling) — scaled to the card's own currency so an INR card
+ * shows an INR-appropriate figure and everything else shows the card's
+ * actual currency, rather than a currency baked into the copy that can
+ * drift from whichever card is actually issued. */
+function limitMagnitudes(currency: CurrencyCode): { atmWithdrawal: number; highValueCeiling: number } {
+  return currency === "INR" ? { atmWithdrawal: 200000, highValueCeiling: 100000000 } : { atmWithdrawal: 20000, highValueCeiling: 100000 };
+}
+
+interface LimitRow {
+  card: "Debit" | "Credit";
+  capability: string;
+  limit: string;
+  sample: boolean;
+}
+
+/** Built from the account's own issued cards — each row takes its
+ * currency from the real card it describes, so it can never show a
+ * currency the customer's actual cards don't carry. */
+function limitRowsFor(cards: Card[]): LimitRow[] {
+  const rows: LimitRow[] = [];
+  const debit = cards.find((c) => c.type === "Debit");
+  const credit = cards.find((c) => c.type === "Credit");
+
+  if (debit) {
+    const mag = limitMagnitudes(debit.currency);
+    rows.push({ card: "Debit", capability: "ATM cash withdrawal", limit: formatCode(mag.atmWithdrawal, debit.currency), sample: false });
+    rows.push({
+      card: "Debit",
+      capability: debit.capNote ?? "Point-of-sale daily cap",
+      limit: formatCode(debit.capPerTxn ?? Math.round(mag.atmWithdrawal * 1.25), debit.currency),
+      sample: debit.capPerTxn == null,
+    });
+  }
+  if (credit) {
+    const mag = limitMagnitudes(credit.currency);
+    rows.push({ card: "Credit", capability: "High-value transaction ceiling", limit: formatCode(mag.highValueCeiling, credit.currency), sample: false });
+    rows.push({ card: "Credit", capability: "Statement cycle", limit: "30 days", sample: true });
+  }
+
+  return rows;
 }
 
 function CardLogo({ dark }: { dark: boolean }) {
@@ -84,7 +128,7 @@ function CardBack({ c, cvvRevealed, onToggleCvv }: { c: Card; cvvRevealed: boole
   const isCredit = c.type === "Credit";
   return (
     <div
-      className={`absolute inset-0 overflow-hidden rounded-xl text-white shadow-lg [backface-visibility:hidden] [transform:rotateY(180deg)] ${
+      className={`absolute inset-0 overflow-hidden rounded-xl pb-3 text-white shadow-lg [backface-visibility:hidden] [transform:rotateY(180deg)] ${
         isCredit ? "bg-gradient-to-br from-[#20242F] via-[#171A22] to-[#0C0E13]" : "bg-gradient-to-br from-navy-dk via-navy to-navy-lt"
       }`}
     >
@@ -107,14 +151,6 @@ function CardBack({ c, cvvRevealed, onToggleCvv }: { c: Card; cvvRevealed: boole
       <div className="px-3.5 mt-1.5 text-[8px] text-white/55 leading-relaxed">
         This card remains the property of 2 Way Fund International. A real institution never redisplays a security code once a card is issued —
         this value is shown only because this is a design prototype, not a real financial service.
-      </div>
-
-      <div className="absolute bottom-2.5 left-3.5 right-3.5 flex items-end justify-between">
-        <div>
-          <span className="block text-[8px] uppercase tracking-wide text-white/55">24×7 Cardholder Support</span>
-          <span className="block text-[10.5px] font-semibold font-num">1800-2WF-HELP</span>
-        </div>
-        <CardLogo dark={isCredit} />
       </div>
     </div>
   );
@@ -254,32 +290,34 @@ export function CardsPage() {
         </div>
       )}
 
-      <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
-        <div className="flex items-center gap-3 px-4.5 sm:px-5 py-4 border-b border-border-lt">
-          <span className="flex-none w-10 h-10 rounded-xl bg-[#EFF8F2] text-pos flex items-center justify-center">
-            <ShieldCheck size={17} />
-          </span>
-          <div>
-            <h3 className="m-0 text-[14.5px] font-bold text-navy">Limits &amp; Capabilities</h3>
-            <p className="m-0 mt-0.5 text-[11px] text-ink-2">Published per-card capability and limit schedule</p>
+      {cards && cards.length > 0 ? (
+        <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center gap-3 px-4.5 sm:px-5 py-4 border-b border-border-lt">
+            <span className="flex-none w-10 h-10 rounded-xl bg-[#EFF8F2] text-pos flex items-center justify-center">
+              <ShieldCheck size={17} />
+            </span>
+            <div>
+              <h3 className="m-0 text-[14.5px] font-bold text-navy">Limits &amp; Capabilities</h3>
+              <p className="m-0 mt-0.5 text-[11px] text-ink-2">Published per-card capability and limit schedule</p>
+            </div>
+          </div>
+
+          <div className="divide-y divide-border-lt">
+            {limitRowsFor(cards).map((l, i) => (
+              <div key={i} className="flex items-center justify-between gap-3 px-4.5 sm:px-5 py-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Tag variant={l.card === "Debit" ? "processing" : "completed"}>{l.card}</Tag>
+                  <div className="min-w-0">
+                    <p className="m-0 text-[12.5px] text-ink truncate">{l.capability}</p>
+                    {l.sample ? <p className="m-0 text-[10.5px] text-ink-2">Sample value — not stated in source policy</p> : null}
+                  </div>
+                </div>
+                <span className="font-num tabular-nums font-bold text-[13px] text-navy flex-none">{l.limit}</span>
+              </div>
+            ))}
           </div>
         </div>
-
-        <div className="divide-y divide-border-lt">
-          {store.cardLimits.map((l, i) => (
-            <div key={i} className="flex items-center justify-between gap-3 px-4.5 sm:px-5 py-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Tag variant={l.card === "Debit" ? "processing" : "completed"}>{l.card}</Tag>
-                <div className="min-w-0">
-                  <p className="m-0 text-[12.5px] text-ink truncate">{l.capability}</p>
-                  {l.sample ? <p className="m-0 text-[10.5px] text-ink-2">Sample value — not stated in source policy</p> : null}
-                </div>
-              </div>
-              <span className="font-num tabular-nums font-bold text-[13px] text-navy flex-none">{l.limit}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      ) : null}
     </>
   );
 }

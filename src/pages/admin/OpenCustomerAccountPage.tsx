@@ -45,8 +45,8 @@ export function OpenCustomerAccountPage() {
   const [pan, setPan] = useState("");
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
-  const [openingDeposit, setOpeningDeposit] = useState("50000");
-  const [currency, setCurrency] = useState<CurrencyCode>("USD");
+  const [openingDeposit, setOpeningDeposit] = useState("");
+  const [currency, setCurrency] = useState<CurrencyCode>("INR");
   const [residentAddress, setResidentAddress] = useState("");
   const [officeAddress, setOfficeAddress] = useState("");
 
@@ -78,8 +78,8 @@ export function OpenCustomerAccountPage() {
     setPan("");
     setEmail("");
     setMobile("");
-    setOpeningDeposit("50000");
-    setCurrency("USD");
+    setOpeningDeposit("");
+    setCurrency("INR");
     setResidentAddress("");
     setOfficeAddress("");
     setErrors({});

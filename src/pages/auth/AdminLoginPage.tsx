@@ -45,6 +45,17 @@ export function AdminLoginPage() {
     try {
       const result = await apiLogin(trimmedEmail, pass);
 
+      // Security PIN sign-in is a customer-only feature (set from the
+      // customer-facing "9-Digit PIN & Security" page) — no staff account
+      // can have one active, so this branch is unreachable in practice.
+      // Handled anyway so a staff login never silently hangs if that ever
+      // changes.
+      if (result.pinRequired) {
+        recordFailure();
+        setError("This account requires a sign-in method not supported here. Contact support.");
+        return;
+      }
+
       if (result.user.role !== "admin") {
         recordFailure();
         setError("This account does not have staff access. Use a Compliance or Operations login instead.");

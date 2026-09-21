@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { StatusTag } from "../../components/ui/Tag";
 import { LoadingBlock, Note } from "../../components/ui/Misc";
 import { useApp } from "../../state/AppContext";
-import { displayMoney, formatCode, groupInFours, MASK } from "../../lib/format";
+import { displayMoney, formatCode, groupInFours } from "../../lib/format";
 import { getBalances, getMe, getTransactions } from "../../services/meService";
 import { ApiError } from "../../services/apiClient";
 import { ProfilePhotoAvatar } from "./ProfilePhotoAvatar";
@@ -15,16 +15,17 @@ interface CopyableDetailProps {
   value: string;
   copied: boolean;
   onCopy: () => void;
+  bold?: boolean;
 }
 
 /** One account-identifier tile in the hero card: a label, the value, and
  * a copy control. Shown in full — every value here belongs to the
  * customer already looking at it. */
-function CopyableDetail({ label, value, copied, onCopy }: CopyableDetailProps) {
+function CopyableDetail({ label, value, copied, onCopy, bold = false }: CopyableDetailProps) {
   return (
     <div className="rounded-lg border border-gold/25 bg-[#FFFBF2] px-3 py-2">
       <span className="block mb-0.5 text-[10px] uppercase text-ink-2 font-semibold">{label}</span>
-      <p className="m-0 flex items-center gap-1.5 text-[12px] text-navy">
+      <p className={`m-0 flex items-center gap-1.5 text-[12px] text-navy ${bold ? "font-bold" : ""}`}>
         <span>{value}</span>
         <button type="button" onClick={onCopy} className="text-ink-2 hover:text-gold-dk" title={`Copy ${label}`}>
           {copied ? <Check size={12} /> : <Copy size={12} />}
@@ -36,7 +37,6 @@ function CopyableDetail({ label, value, copied, onCopy }: CopyableDetailProps) {
 
 export function AccountSummaryPage() {
   const { store, setStore, session, balancesHidden, setBalancesHidden } = useApp();
-  const [acctRevealed, setAcctRevealed] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -102,7 +102,6 @@ export function AccountSummaryPage() {
   }
 
   const inrLedger = store.balances.find((b) => b.currency === "INR") ?? store.balances[0];
-  const last4 = user.accountNumber.slice(-4);
 
   const inrLedgerTx = (() => {
     const list = transactions
@@ -184,11 +183,8 @@ export function AccountSummaryPage() {
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 mt-3.5">
             <div className="rounded-lg border border-gold/25 bg-[#FFFBF2] px-3 py-2">
               <span className="block mb-0.5 text-[10px] uppercase text-ink-2 font-semibold">Account number</span>
-              <p className="m-0 flex items-center gap-1.5 font-num text-[12px] text-navy">
-                <span>{acctRevealed ? groupInFours(user.accountNumber) : `${MASK} ${MASK} ${last4}`}</span>
-                <button type="button" onClick={() => setAcctRevealed((v) => !v)} className="text-ink-2 hover:text-gold-dk" title="Show / hide">
-                  {acctRevealed ? <EyeOff size={12} /> : <Eye size={12} />}
-                </button>
+              <p className="m-0 flex items-center gap-1.5 font-num text-[12px] text-navy font-bold">
+                <span>{groupInFours(user.accountNumber)}</span>
                 <button type="button" onClick={() => copy(user.accountNumber, "acct")} className="text-ink-2 hover:text-gold-dk" title="Copy">
                   {copiedField === "acct" ? <Check size={12} /> : <Copy size={12} />}
                 </button>
@@ -199,6 +195,7 @@ export function AccountSummaryPage() {
               value={user.reference}
               copied={copiedField === "cif"}
               onCopy={() => copy(user.reference, "cif")}
+              bold
             />
             <CopyableDetail
               label="Panel code"

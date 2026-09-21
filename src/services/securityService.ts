@@ -51,3 +51,30 @@ export async function confirmPasswordChange(otp: string, token: string): Promise
     body: JSON.stringify({ otp }),
   });
 }
+
+/** The Security PIN: a second login factor, entered after Customer ID +
+ * password on the sign-in screen — separate from the 9-digit transaction
+ * PIN above, which authorises transfers instead. Same two-step,
+ * OTP-gated change flow. */
+export async function initiateSecurityPinChange(
+  payload: { currentCredential: string; newSecurityPin: string; newSecurityPinConfirmation: string },
+  token: string
+): Promise<void> {
+  await apiFetch<null>("/me/security-pin/initiate", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      current_credential: payload.currentCredential,
+      new_security_pin: payload.newSecurityPin,
+      new_security_pin_confirmation: payload.newSecurityPinConfirmation,
+    }),
+  });
+}
+
+export async function confirmSecurityPinChange(otp: string, token: string): Promise<void> {
+  await apiFetch<null>("/me/security-pin/confirm", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ otp }),
+  });
+}

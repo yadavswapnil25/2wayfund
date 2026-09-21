@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import {
   Building2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
@@ -38,20 +39,38 @@ import {
 } from "../../services/applicationService";
 import { ApiError } from "../../services/apiClient";
 
-/** A titled, bordered card for one group of read-only details — the same
- * card-per-section treatment used for the applicant's own compliance-review
- * recap (2wayfund-react src/pages/public/OpenAccountPage.tsx's ReviewSection),
- * so a reviewer sees the application organised the same way the applicant did. */
-function DetailCard({ icon, title, items, children }: { icon: ReactNode; title: string; items?: [string, ReactNode][]; children?: ReactNode }) {
+/** A titled, bordered, collapsible card for one group of read-only
+ * details — the same card-per-section treatment used for the applicant's
+ * own compliance-review recap (2wayfund-react
+ * src/pages/public/OpenAccountPage.tsx's ReviewSection), so a reviewer
+ * sees the application organised the same way the applicant did. Starts
+ * closed so an application's full detail doesn't dump onto the screen at
+ * once; the header opens whichever section a reviewer actually needs. */
+function DetailCard({
+  icon,
+  title,
+  items,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  items?: [string, ReactNode][];
+  children?: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
   return (
     <div className="bg-white border border-border-lt rounded-xl overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border-lt bg-tint">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="w-full flex items-center gap-2 px-4 py-2.5 border-b border-border-lt bg-tint text-left cursor-pointer"
+      >
         <span className="text-navy flex-none">{icon}</span>
-        <span className="text-[12.5px] font-bold text-navy">{title}</span>
-      </div>
-      <div className={items ? "px-4 pt-3.5 pb-0.5" : ""}>
-        {items ? <DetailGrid items={items} /> : children}
-      </div>
+        <span className="text-[12.5px] font-bold text-navy flex-1">{title}</span>
+        <ChevronDown size={14} className={`text-ink-2 flex-none transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open ? <div className={items ? "px-4 pt-3.5 pb-0.5" : ""}>{items ? <DetailGrid items={items} /> : children}</div> : null}
     </div>
   );
 }
@@ -367,27 +386,7 @@ export function ComplianceConsolePage() {
 
                   {isOpen ? (
                     <div className="px-4.5 sm:px-5 pb-5 bg-tint/40 flex flex-col gap-4">
-                      <div className="bg-white border border-border-lt rounded-xl px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-2">
-                        <span className="text-[11.5px] text-ink-2">
-                          Process stage{" "}
-                          <strong className="text-navy">
-                            {stageForStatus(a.status)} — {OPENING_STEPS[stageForStatus(a.status) - 1]}
-                          </strong>{" "}
-                          of {OPENING_STEPS.length}
-                        </span>
-                        <span className="w-px h-4 bg-border-lt hidden sm:block" />
-                        <DocumentStatus label="Photo" uploaded={a.hasPhoto} onView={() => setDocView({ ref: a.ref, kind: "photo" })} />
-                        <DocumentStatus label="Signature" uploaded={a.hasSignature} onView={() => setDocView({ ref: a.ref, kind: "signature" })} />
-                        {a.tier.startsWith("Corporate Account") ? (
-                          <DocumentStatus
-                            label="Business certificate"
-                            uploaded={a.hasBusinessCertificate}
-                            onView={() => setDocView({ ref: a.ref, kind: "business-certificate" })}
-                          />
-                        ) : null}
-                      </div>
-
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid gap-4 sm:grid-cols-2 items-start">
                         <DetailCard
                           icon={<Ticket size={14} />}
                           title="Application"
@@ -410,11 +409,12 @@ export function ComplianceConsolePage() {
                       </div>
 
                       {a.dob ? (
-                        <div className="grid gap-4 sm:grid-cols-3">
+                        <div className="grid gap-4 sm:grid-cols-3 items-start">
                           <DetailCard
                             icon={<UserRound size={14} />}
-                            title="Applicant & contact"
+                            title="Contact"
                             items={[
+                              ["Email", a.email],
                               ["Date of birth", `${isoToDisplay(a.dob)} (age ${ageOn(a.dob, todayIso())})`],
                               ...(a.education ? ([["Education", a.education]] as [string, string][]) : []),
                               ...(a.mobilePersonal ? ([["Personal mobile", a.mobilePersonal]] as [string, string][]) : []),
@@ -500,6 +500,26 @@ export function ComplianceConsolePage() {
                           ))}
                         </ol>
                       </DetailCard>
+
+                      <div className="bg-white border border-border-lt rounded-xl px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+                        <span className="text-[11.5px] text-ink-2">
+                          Process stage{" "}
+                          <strong className="text-navy">
+                            {stageForStatus(a.status)} — {OPENING_STEPS[stageForStatus(a.status) - 1]}
+                          </strong>{" "}
+                          of {OPENING_STEPS.length}
+                        </span>
+                        <span className="w-px h-4 bg-border-lt hidden sm:block" />
+                        <DocumentStatus label="Photo" uploaded={a.hasPhoto} onView={() => setDocView({ ref: a.ref, kind: "photo" })} />
+                        <DocumentStatus label="Signature" uploaded={a.hasSignature} onView={() => setDocView({ ref: a.ref, kind: "signature" })} />
+                        {a.tier.startsWith("Corporate Account") ? (
+                          <DocumentStatus
+                            label="Business certificate"
+                            uploaded={a.hasBusinessCertificate}
+                            onView={() => setDocView({ ref: a.ref, kind: "business-certificate" })}
+                          />
+                        ) : null}
+                      </div>
                     </div>
                   ) : null}
                 </div>

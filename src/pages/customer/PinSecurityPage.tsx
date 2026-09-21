@@ -1,13 +1,20 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { KeyRound, Lock, ShieldCheck } from "lucide-react";
+import { Fingerprint, KeyRound, Lock, ShieldCheck } from "lucide-react";
 import { PageHead } from "../../components/ui/Flow";
 import { Field, FormActions, FormGrid, TextInput } from "../../components/ui/Field";
 import { Btn } from "../../components/ui/Button";
 import { Note } from "../../components/ui/Misc";
 import { Tag } from "../../components/ui/Tag";
 import { useApp } from "../../state/AppContext";
-import { confirmPinChange, confirmPasswordChange, initiatePinChange, initiatePasswordChange } from "../../services/securityService";
+import {
+  confirmPinChange,
+  confirmPasswordChange,
+  confirmSecurityPinChange,
+  initiatePinChange,
+  initiatePasswordChange,
+  initiateSecurityPinChange,
+} from "../../services/securityService";
 import { getMe } from "../../services/meService";
 import { ApiError } from "../../services/apiClient";
 import { LOGIN_NOTICE_KEY } from "../../data/constants";
@@ -65,6 +72,16 @@ export function PinSecurityPage() {
   const [pwOtpInput, setPwOtpInput] = useState("");
   const [pwOtpError, setPwOtpError] = useState<string | null>(null);
   const [pwSubmitting, setPwSubmitting] = useState(false);
+
+  const [spAuth, setSpAuth] = useState("");
+  const [spNew, setSpNew] = useState("");
+  const [spConfirm, setSpConfirm] = useState("");
+  const [spErrors, setSpErrors] = useState<Record<string, string | null>>({});
+  const [spFormError, setSpFormError] = useState<string | null>(null);
+  const [spStage, setSpStage] = useState<Stage>("form");
+  const [spOtpInput, setSpOtpInput] = useState("");
+  const [spOtpError, setSpOtpError] = useState<string | null>(null);
+  const [spSubmitting, setSpSubmitting] = useState(false);
 
   async function submitPin() {
     if (pinSubmitting) return;
@@ -178,13 +195,65 @@ export function PinSecurityPage() {
     }
   }
 
+  async function submitSecurityPin() {
+    if (spSubmitting) return;
+    const errs: Record<string, string | null> = {};
+    if (!spAuth) errs.auth = "Enter your current password or 8-digit secure code.";
+    if (!/^\d{6}$/.test(spNew)) errs.new = "Enter exactly 6 numeric digits.";
+    if (!spConfirm) errs.confirm = "Re-enter the 6-digit Security PIN.";
+    else if (spConfirm !== spNew) errs.confirm = "PINs do not match.";
+    setSpErrors(errs);
+    if (Object.values(errs).some(Boolean)) return;
+    if (!session.token) {
+      setSpFormError("Your session has no API token — sign out and sign back in.");
+      return;
+    }
+
+    setSpFormError(null);
+    setSpSubmitting(true);
+    try {
+      await initiateSecurityPinChange({ currentCredential: spAuth, newSecurityPin: spNew, newSecurityPinConfirmation: spConfirm }, session.token);
+      setSpStage("otp");
+      setSpOtpInput("");
+      setSpOtpError(null);
+    } catch (err) {
+      setSpFormError(firstErrorMessage(err, "Could not start the Security PIN change. Please try again."));
+    } finally {
+      setSpSubmitting(false);
+    }
+  }
+
+  async function confirmSecurityPinOtp() {
+    if (spSubmitting || !session.token) return;
+    if (!/^\d{6}$/.test(spOtpInput)) {
+      setSpOtpError("Enter the 6-digit code from your email.");
+      return;
+    }
+
+    setSpOtpError(null);
+    setSpSubmitting(true);
+    try {
+      await confirmSecurityPinChange(spOtpInput, session.token);
+      setStore((s) => ({ ...s, user: { ...s.user, securityPinStatus: "Active" } }));
+      setSpStage("done");
+      setSpAuth("");
+      setSpNew("");
+      setSpConfirm("");
+    } catch (err) {
+      setSpOtpError(firstErrorMessage(err, "Could not confirm that code. Please try again."));
+    } finally {
+      setSpSubmitting(false);
+    }
+  }
+
   const active = store.user.pinStatus === "Active";
+  const securityPinActive = store.user.securityPinStatus === "Active";
 
   return (
     <>
       <PageHead
         title="9-Digit PIN & Security"
-        lede="Set or update the transaction PIN required before any interbank or internal fund transfer, and change the password used to sign in to NetBanking."
+        lede="Set or update the transaction PIN required before any interbank or internal fund transfer, change your NetBanking password, and set a Security PIN — a second, 6-digit code asked for at login once it's active."
       />
 
       <div className="grid gap-5 mb-5 items-start min-[1001px]:grid-cols-2">
@@ -217,14 +286,25 @@ export function PinSecurityPage() {
                   Your 9-digit transaction PIN has been set and activated. Use it wherever the transfer flow calls for a transaction password.
                 </p>
                 <button type="button" onClick={() => setPinStage("form")} className="text-xs font-semibold text-navy underline">
-                  Set a different PIN
+                  Change Transaction PIN
                 </button>
               </div>
             ) : null}
 
             {pinStage === "form" ? (
               <FormGrid>
-                <Field label="Current password or 8-digit secure code" htmlFor="pin-auth" required wide error={pinErrors.auth}>
+                <Field
+                  label="Current password or 8-digit secure code"
+                  htmlFor="pin-auth"
+                  required
+                  wide
+                  error={pinErrors.auth}
+                  hint={
+                    !pinErrors.auth
+                      ? "Your NetBanking password — or, if you haven't set one yet, the 8-digit secure code your bank gave you when the account was opened."
+                      : undefined
+                  }
+                >
                   <TextInput id="pin-auth" type="password" value={pinAuth} onChange={(e) => setPinAuth(e.target.value)} hasError={!!pinErrors.auth} />
                 </Field>
                 <Field
@@ -260,7 +340,7 @@ export function PinSecurityPage() {
                 </Field>
                 <FormActions className="flex-col items-stretch">
                   <Btn variant="block" onClick={() => void submitPin()} disabled={pinSubmitting}>
-                    {pinSubmitting ? "Sending code…" : "Set & Activate 9-Digit Transaction PIN"}
+                    {pinSubmitting ? "Sending code…" : active ? "Change Transaction PIN" : "Set & Activate 9-Digit Transaction PIN"}
                   </Btn>
                   <Note className="!m-0">A one-time code will be emailed to the address on file before this takes effect.</Note>
                 </FormActions>
@@ -297,7 +377,18 @@ export function PinSecurityPage() {
 
             {pwStage === "form" ? (
               <FormGrid>
-                <Field label="Current password or 8-digit secure code" htmlFor="pw-auth" required wide error={pwErrors.auth}>
+                <Field
+                  label="Current password or 8-digit secure code"
+                  htmlFor="pw-auth"
+                  required
+                  wide
+                  error={pwErrors.auth}
+                  hint={
+                    !pwErrors.auth
+                      ? "Your NetBanking password — or, if you haven't set one yet, the 8-digit secure code your bank gave you when the account was opened."
+                      : undefined
+                  }
+                >
                   <TextInput id="pw-auth" type="password" value={pwAuth} onChange={(e) => setPwAuth(e.target.value)} hasError={!!pwErrors.auth} />
                 </Field>
                 <Field label="New password" htmlFor="pw-new" required wide error={pwErrors.new} hint={!pwErrors.new ? "Minimum 8 characters" : undefined}>
@@ -323,6 +414,109 @@ export function PinSecurityPage() {
                 submitting={pwSubmitting}
                 onConfirm={() => void confirmPwOtp()}
                 onCancel={() => setPwStage("form")}
+              />
+            ) : null}
+          </div>
+        </div>
+
+        {/* Security PIN — second login factor */}
+        <div className="bg-white border border-border-lt rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center gap-3 px-4.5 sm:px-5 py-4 border-b border-border-lt">
+            <span className="flex-none w-10 h-10 rounded-xl bg-[#EAF1F9] text-navy flex items-center justify-center">
+              <Fingerprint size={18} />
+            </span>
+            <div>
+              <h3 className="m-0 text-[14.5px] font-bold text-navy">Security PIN</h3>
+              <p className="m-0 mt-0.5 text-[11px] text-ink-2">A second login factor, asked for after your password</p>
+            </div>
+          </div>
+
+          <div className="px-4.5 sm:px-5 py-4">
+            <div className="rounded-xl border border-border-lt bg-tint px-3.5 py-3 mb-4">
+              <span className="text-[10.5px] uppercase text-ink-2 font-semibold">Security PIN status</span>
+              <div className="flex items-center justify-between mt-1">
+                <strong className="text-sm text-navy">{securityPinActive ? "Active & Configured" : "Not configured"}</strong>
+                <Tag variant={securityPinActive ? "completed" : "review"}>{securityPinActive ? "Enabled" : "Disabled"}</Tag>
+              </div>
+            </div>
+
+            {spFormError ? <Note danger>{spFormError}</Note> : null}
+            {spStage === "done" ? (
+              <div className="bg-[#F0F8F3] border border-[#A8D4BB] rounded-xl p-4 mb-3">
+                <h3 className="text-pos font-bold mb-2 text-sm">Security PIN set</h3>
+                <p className="m-0 text-xs mb-2.5">
+                  Your 6-digit Security PIN has been set and activated. From your next login, you'll be asked for it right after your password.
+                </p>
+                <button type="button" onClick={() => setSpStage("form")} className="text-xs font-semibold text-navy underline">
+                  Change Security PIN
+                </button>
+              </div>
+            ) : null}
+
+            {spStage === "form" ? (
+              <FormGrid>
+                <Field
+                  label="Current password or 8-digit secure code"
+                  htmlFor="sp-auth"
+                  required
+                  wide
+                  error={spErrors.auth}
+                  hint={
+                    !spErrors.auth
+                      ? "Your NetBanking password — or, if you haven't set one yet, the 8-digit secure code your bank gave you when the account was opened."
+                      : undefined
+                  }
+                >
+                  <TextInput id="sp-auth" type="password" value={spAuth} onChange={(e) => setSpAuth(e.target.value)} hasError={!!spErrors.auth} />
+                </Field>
+                <Field
+                  label="New 6-digit Security PIN"
+                  htmlFor="sp-new"
+                  required
+                  wide
+                  error={spErrors.new}
+                  hint={!spErrors.new ? `Must be exactly 6 numeric digits. Digits: ${spNew.length}/6` : undefined}
+                >
+                  <TextInput
+                    id="sp-new"
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={spNew}
+                    onChange={(e) => setSpNew(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+                    placeholder="6 numeric digits (e.g. 482910)"
+                    hasError={!!spErrors.new}
+                  />
+                </Field>
+                <Field label="Confirm new Security PIN" htmlFor="sp-confirm" required wide error={spErrors.confirm}>
+                  <TextInput
+                    id="sp-confirm"
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={spConfirm}
+                    onChange={(e) => setSpConfirm(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+                    placeholder="Re-enter 6 numeric digits"
+                    hasError={!!spErrors.confirm}
+                  />
+                </Field>
+                <FormActions className="flex-col items-stretch">
+                  <Btn variant="block" onClick={() => void submitSecurityPin()} disabled={spSubmitting}>
+                    {spSubmitting ? "Sending code…" : securityPinActive ? "Change Security PIN" : "Set & Activate Security PIN"}
+                  </Btn>
+                  <Note className="!m-0">A one-time code will be emailed to the address on file before this takes effect.</Note>
+                </FormActions>
+              </FormGrid>
+            ) : null}
+
+            {spStage === "otp" ? (
+              <OtpBox
+                otpInput={spOtpInput}
+                setOtpInput={setSpOtpInput}
+                error={spOtpError}
+                submitting={spSubmitting}
+                onConfirm={() => void confirmSecurityPinOtp()}
+                onCancel={() => setSpStage("form")}
               />
             ) : null}
           </div>

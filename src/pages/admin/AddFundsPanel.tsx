@@ -33,9 +33,14 @@ type Direction = "credit" | "debit";
  * balance (credit) or is simply impossible (debit) — e.g. Open Account
  * defaults its opening deposit to USD; picking INR here out of habit
  * doesn't mean "the account's funds," it means a different, unrelated
- * ledger. */
-export function AddFundsPanel({ userId, token }: { userId: number; token: string }) {
-  const [direction, setDirection] = useState<Direction>("credit");
+ * ledger.
+ *
+ * `fixedDirection` locks the panel to just Credit or just Debit and hides
+ * the toggle — Add Funds and Debit Funds are now separate sidebar tools
+ * rather than one combined control, so each only ever needs its own
+ * direction. */
+export function AddFundsPanel({ userId, token, fixedDirection }: { userId: number; token: string; fixedDirection?: Direction }) {
+  const [direction, setDirection] = useState<Direction>(fixedDirection ?? "credit");
   const [balances, setBalances] = useState<CustomerBalance[] | null>(null);
   const [balancesError, setBalancesError] = useState<string | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode | null>(null);
@@ -122,22 +127,26 @@ export function AddFundsPanel({ userId, token }: { userId: number; token: string
       <div className="flex items-center justify-between gap-3 flex-wrap mb-2.5">
         <div className="flex items-center gap-1.5">
           <Wallet size={13} className="text-navy" />
-          <h4 className="m-0 text-[11px] font-bold uppercase tracking-wide text-navy">Add / Debit Funds</h4>
+          <h4 className="m-0 text-[11px] font-bold uppercase tracking-wide text-navy">
+            {fixedDirection ? (fixedDirection === "credit" ? "Add Funds" : "Debit Funds") : "Add / Debit Funds"}
+          </h4>
         </div>
-        <div className="inline-flex rounded-full border border-border-lt bg-tint p-0.5">
-          {(["credit", "debit"] as const).map((d) => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => switchDirection(d)}
-              className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-colors ${
-                direction === d ? "bg-white text-navy shadow-sm" : "text-ink-2 hover:text-navy"
-              }`}
-            >
-              {d === "credit" ? "Credit" : "Debit"}
-            </button>
-          ))}
-        </div>
+        {!fixedDirection ? (
+          <div className="inline-flex rounded-full border border-border-lt bg-tint p-0.5">
+            {(["credit", "debit"] as const).map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => switchDirection(d)}
+                className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-colors ${
+                  direction === d ? "bg-white text-navy shadow-sm" : "text-ink-2 hover:text-navy"
+                }`}
+              >
+                {d === "credit" ? "Credit" : "Debit"}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       <p className="m-0 mb-3 text-[11.5px] text-ink-2">

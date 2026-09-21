@@ -18,9 +18,10 @@ interface MeDto {
   daily_domestic_limit: string | number;
   transfers_blocked: boolean;
   transfers_blocked_reason: string | null;
-  transfers_block_scope: "external_only" | "all" | "everything" | null;
+  transfers_block_scope: "external_only" | "internal_only" | "all" | "everything" | null;
   netbanking_enabled: boolean;
   pin_status: string;
+  security_pin_status: string;
   kyc_status: string;
   has_photo: boolean;
 }
@@ -57,6 +58,7 @@ export async function getMe(token: string, signal?: AbortSignal): Promise<Partia
     transfersBlockScope: dto.transfers_block_scope,
     netbankingEnabled: dto.netbanking_enabled,
     pinStatus: dto.pin_status,
+    securityPinStatus: dto.security_pin_status,
     kycStatus: dto.kyc_status,
     hasPhoto: dto.has_photo,
   };
